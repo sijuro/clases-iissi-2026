@@ -1,7 +1,9 @@
 import OrderController from '../controllers/OrderController.js'
+import * as OrderValidation from '../controllers/validation/OrderValidation.js'
 import { hasRole, isLoggedIn } from '../middlewares/AuthMiddleware.js'
 import { checkEntityExists } from '../middlewares/EntityMiddleware.js'
 import * as OrderMiddleware from '../middlewares/OrderMiddleware.js'
+import { handleValidation } from '../middlewares/ValidationHandlingMiddleware.js'
 import { Order } from '../models/models.js'
 
 const loadFileRoutes = function (app) {
@@ -36,6 +38,38 @@ const loadFileRoutes = function (app) {
       isLoggedIn,
       hasRole('rider'),
       OrderController.findAvailableOrders)
+
+  app.route('/orders/rider')
+    .get(
+      isLoggedIn,
+      hasRole('rider'),
+      OrderController.indexRider)
+
+  app.route('/orders/:orderId/accept')
+    .patch(
+      isLoggedIn,
+      hasRole('rider'),
+      checkEntityExists(Order, 'orderId'),
+      OrderMiddleware.checkOrderCanBeAccepted,
+      OrderController.accept)
+
+  app.route('/orders/:orderId/riderDeliver')
+    .patch(
+      isLoggedIn,
+      hasRole('rider'),
+      checkEntityExists(Order, 'orderId'),
+      OrderMiddleware.checkOrderCanBeDeliveredByRider,
+      OrderController.deliver)
+
+  app.route('/orders/:orderId/riderComments')
+    .patch(
+      isLoggedIn,
+      hasRole('rider'),
+      checkEntityExists(Order, 'orderId'),
+      OrderMiddleware.checkOrderIsAssignedToRider,
+      OrderValidation.updateRiderComments,
+      handleValidation,
+      OrderController.updateRiderComments)
 
   app.route('/orders/:orderId')
     .get(

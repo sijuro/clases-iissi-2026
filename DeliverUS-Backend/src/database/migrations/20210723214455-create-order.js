@@ -47,6 +47,20 @@ module.exports = {
           key: 'id'
         }
       },
+      riderId: {
+        allowNull: true,
+        type: Sequelize.INTEGER,
+        references: {
+          model: {
+            tableName: 'Users'
+          },
+          key: 'id'
+        }
+      },
+      riderComments: {
+        allowNull: true,
+        type: Sequelize.TEXT
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,

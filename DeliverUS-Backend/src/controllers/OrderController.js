@@ -92,6 +92,7 @@ const findAvailableOrders = async function (req, res) {
   }
 }
 
+
 // Returns :restaurantId orders
 const indexRestaurant = async function (req, res) {
   const whereClauses = generateFilterWhereClauses(req)
@@ -112,19 +113,53 @@ const indexRestaurant = async function (req, res) {
   }
 }
 
+
 const indexCustomer = async function (req, res) {
   res.status(500).send('This function is to be implemented')
 }
+
+const indexRider = async function (req, res) {
+  try {
+    const myOrders = await Order.findAll({
+      where: {
+        riderId: req.user.id
+      },
+      include: [{
+        model: Restaurant,
+        as: 'restaurant',
+        attributes: ['name', 'address', 'postalCode', 'logo']
+      },
+      {
+        model: User,
+        as: 'user',
+        attributes: ['firstName', 'phone']
+      }
+      ],
+      // Orders not yet delivered first (deliveredAt IS NULL sorts before any date in MariaDB), then delivered ones by delivery date
+      order: [
+        ['deliveredAt', 'ASC'],
+        ['createdAt', 'ASC']
+      ]
+    })
+    res.json(myOrders)
+  } catch (err) {
+    res.status(500).send(err)
+  }
+}
+
+
 
 const create = async (req, res) => {
   // Use sequelizeSession to start a transaction
   res.status(500).send('This function is to be implemented')
 }
 
+
 const update = async function (req, res) {
   // Use sequelizeSession to start a transaction
   res.status(500).send('This function is to be implemented')
 }
+
 
 const destroy = async function (req, res) {
   res.status(500).send('This function is to be implemented')
@@ -134,6 +169,18 @@ const confirm = async function (req, res) {
   try {
     const order = await Order.findByPk(req.params.orderId)
     order.startedAt = new Date()
+    const updatedOrder = await order.save()
+    res.json(updatedOrder)
+  } catch (err) {
+    res.status(500).send(err)
+  }
+}
+
+const accept = async function (req, res) {
+  try {
+    const order = await Order.findByPk(req.params.orderId)
+    order.riderId = req.user.id
+    order.sentAt = new Date()
     const updatedOrder = await order.save()
     res.json(updatedOrder)
   } catch (err) {
@@ -160,6 +207,17 @@ const deliver = async function (req, res) {
     const restaurant = await Restaurant.findByPk(order.restaurantId)
     const averageServiceTime = await restaurant.getAverageServiceTime()
     await Restaurant.update({ averageServiceMinutes: averageServiceTime }, { where: { id: order.restaurantId } })
+    res.json(updatedOrder)
+  } catch (err) {
+    res.status(500).send(err)
+  }
+}
+
+const updateRiderComments = async function (req, res) {
+  try {
+    const order = await Order.findByPk(req.params.orderId)
+    order.riderComments = req.body.riderComments
+    const updatedOrder = await order.save()
     res.json(updatedOrder)
   } catch (err) {
     res.status(500).send(err)
@@ -243,12 +301,15 @@ const analytics = async function (req, res) {
 const OrderController = {
   indexRestaurant,
   indexCustomer,
+  indexRider,
   create,
   update,
   destroy,
   confirm,
   send,
   deliver,
+  accept,
+  updateRiderComments,
   show,
   analytics,
   findAvailableOrders

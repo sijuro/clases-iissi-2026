@@ -4,12 +4,16 @@ import {
   View,
   FlatList,
   ImageBackground,
-  Image
+  Image,
+  Pressable
 } from 'react-native'
 import { showMessage } from 'react-native-flash-message'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { getOrderDetail } from '../../api/OrderEndpoints'
+import { Formik } from 'formik'
+import * as yup from 'yup'
+import { getOrderDetail, updateRiderComments } from '../../api/OrderEndpoints'
 import ImageCard from '../../components/ImageCard'
+import InputItem from '../../components/InputItem'
 import TextRegular from '../../components/TextRegular'
 import TextSemiBold from '../../components/TextSemiBold'
 import * as GlobalStyles from '../../styles/GlobalStyles'
@@ -17,21 +21,69 @@ import defaultProductImage from '../../../assets/product.jpeg'
 import restaurantLogo from '../../../assets/restaurantLogo.jpeg'
 import { API_BASE_URL } from '@env'
 
-const getElapsedMinutes = (dateString) => {
+const getElapsedMinutes = dateString => {
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now - date
   return Math.floor(diffMs / 60000)
 }
 
-export default function OrderDetailScreen({ navigation, route }) {
+const validationSchema = yup.object().shape({
+  riderComments: yup.string().nullable().max(500, 'Comment too long')
+})
+
+export default function EditOrderCommentsScreen({ navigation, route }) {
   const [order, setOrder] = useState({})
+  const [initialCommentValues, setInitialCommentValues] = useState({
+    riderComments: null
+  })
 
   useEffect(() => {
     fetchOrderDetail()
   }, [route])
 
-  const renderHeader = () => {
+  const fetchOrderDetail = async () => {
+    try {
+      const fetchedOrder = await getOrderDetail(route.params.id)
+      setOrder(fetchedOrder)
+      setInitialCommentValues({
+        riderComments: fetchedOrder.riderComments
+      })
+    } catch (error) {
+      showMessage({
+        message: `There was an error while retrieving order details (id ${route.params.id}). ${error}`,
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
+  }
+
+  const handleSaveComment = async values => {
+    try {
+      const updatedOrder = await updateRiderComments(
+        order.id,
+        values.riderComments
+      )
+      setOrder(updatedOrder)
+      navigation.navigate('MyOrdersScreen')
+      showMessage({
+        message: 'Comment saved',
+        type: 'success',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    } catch (error) {
+      showMessage({
+        message: `Could not save the comment for order #${order.id}. ${error}`,
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
+  }
+
+  const renderHeader = handleSubmit => {
     if (!order.restaurant) return null
     return (
       <View>
@@ -62,7 +114,8 @@ export default function OrderDetailScreen({ navigation, route }) {
               {order.restaurant.name}
             </TextSemiBold>
             <TextRegular textStyle={styles.description}>
-              <MaterialCommunityIcons name="store" size={14} color={'white'} /> {order.restaurant.address}, {order.restaurant.postalCode}
+              <MaterialCommunityIcons name="store" size={14} color={'white'} />{' '}
+              {order.restaurant.address}, {order.restaurant.postalCode}
             </TextRegular>
           </View>
         </ImageBackground>
@@ -72,14 +125,59 @@ export default function OrderDetailScreen({ navigation, route }) {
             Order #{order.id}
           </TextSemiBold>
           <TextRegular textStyle={styles.orderInfoText}>
-            <MaterialCommunityIcons name="map-marker" size={14} color={GlobalStyles.brandPrimary} /> Deliver to: {order.user.firstName} - {order.address}
+            <MaterialCommunityIcons
+              name="map-marker"
+              size={14}
+              color={GlobalStyles.brandPrimary}
+            />{' '}
+            Deliver to: {order.user.firstName} - {order.address}
           </TextRegular>
           <TextRegular textStyle={styles.orderInfoText}>
-            <MaterialCommunityIcons name="cash" size={14} color={GlobalStyles.brandPrimary} /> Total: {order.price.toFixed(2)}€
+            <MaterialCommunityIcons
+              name="cash"
+              size={14}
+              color={GlobalStyles.brandPrimary}
+            />{' '}
+            Total: {order.price.toFixed(2)}€
           </TextRegular>
           <TextRegular textStyle={styles.orderInfoText}>
-            <MaterialCommunityIcons name="clock-outline" size={14} color={GlobalStyles.brandPrimary} /> Ordered {getElapsedMinutes(order.createdAt)} min ago
+            <MaterialCommunityIcons
+              name="clock-outline"
+              size={14}
+              color={GlobalStyles.brandPrimary}
+            />{' '}
+            Ordered {getElapsedMinutes(order.createdAt)} min ago
           </TextRegular>
+
+          <InputItem
+            name="riderComments"
+            label="Rider comments:"
+            placeholder="E.g. Left at the door, handed to a neighbour..."
+            multiline
+          />
+
+          <Pressable
+            onPress={handleSubmit}
+            style={({ pressed }) => [
+              {
+                backgroundColor: pressed
+                  ? GlobalStyles.brandBlueTap
+                  : GlobalStyles.brandBlue
+              },
+              styles.saveCommentButton
+            ]}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+              <MaterialCommunityIcons
+                name="comment-text"
+                color={'white'}
+                size={20}
+              />
+              <TextRegular textStyle={styles.saveCommentButtonText}>
+                Save comment
+              </TextRegular>
+            </View>
+          </Pressable>
         </View>
       </View>
     )
@@ -99,9 +197,7 @@ export default function OrderDetailScreen({ navigation, route }) {
         <TextSemiBold textStyle={styles.price}>
           {item.price.toFixed(2)}€
         </TextSemiBold>
-        <TextRegular>
-          Quantity: {item.OrderProducts.quantity}
-        </TextRegular>
+        <TextRegular>Quantity: {item.OrderProducts.quantity}</TextRegular>
       </ImageCard>
     )
   }
@@ -114,31 +210,26 @@ export default function OrderDetailScreen({ navigation, route }) {
     )
   }
 
-  const fetchOrderDetail = async () => {
-    try {
-      const fetchedOrder = await getOrderDetail(route.params.id)
-      setOrder(fetchedOrder)
-    } catch (error) {
-      showMessage({
-        message: `There was an error while retrieving order details (id ${route.params.id}). ${error}`,
-        type: 'error',
-        style: GlobalStyles.flashStyle,
-        titleStyle: GlobalStyles.flashTextStyle
-      })
-    }
-  }
-
   return (
-    <View style={styles.container}>
-      <FlatList
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmptyProductsList}
-        style={styles.container}
-        data={order.products}
-        renderItem={renderProduct}
-        keyExtractor={item => item.id.toString()}
-      />
-    </View>
+    <Formik
+      enableReinitialize
+      validationSchema={validationSchema}
+      initialValues={initialCommentValues}
+      onSubmit={handleSaveComment}
+    >
+      {({ handleSubmit }) => (
+        <View style={styles.container}>
+          <FlatList
+            ListHeaderComponent={renderHeader(handleSubmit)}
+            ListEmptyComponent={renderEmptyProductsList}
+            style={styles.container}
+            data={order.products}
+            renderItem={renderProduct}
+            keyExtractor={item => item.id.toString()}
+          />
+        </View>
+      )}
+    </Formik>
   )
 }
 
@@ -192,5 +283,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     marginVertical: 2
+  },
+  saveCommentButton: {
+    borderRadius: 8,
+    height: 40,
+    marginTop: 16,
+    padding: 10,
+    alignSelf: 'center',
+    width: '100%'
+  },
+  saveCommentButtonText: {
+    fontSize: 16,
+    color: 'white',
+    alignSelf: 'center',
+    marginLeft: 5
   }
 })

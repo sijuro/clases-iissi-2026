@@ -72,7 +72,7 @@ export default function AvailableOrdersScreen({ navigation, route }) {
             color={GlobalStyles.brandPrimary}
           />{' '}
           <TextRegular textStyle={{ color: GlobalStyles.brandPrimary }}>
-            {item.user.firstName} ({item.user.phone}) — {item.address}
+            {item.user.firstName} ({item.user.phone}) - {item.address}
           </TextRegular>
         </TextSemiBold>
         <TextSemiBold>
