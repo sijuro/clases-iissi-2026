@@ -31,12 +31,6 @@ const loadFileRoutes = function (app) {
       OrderMiddleware.checkOrderCanBeDelivered,
       OrderController.deliver)
 
-  app.route('/orders/available')
-    .get(
-      isLoggedIn,
-      hasRole('rider'),
-      OrderController.findAvailableOrders)
-
   app.route('/orders/:orderId')
     .get(
       isLoggedIn,

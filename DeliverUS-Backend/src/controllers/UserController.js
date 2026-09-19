@@ -20,10 +20,6 @@ const registerOwner = async (req, res) => {
   await _register(req, res, 'owner')
 }
 
-const registerRider = async (req, res) => {
-  await _register(req, res, 'rider')
-}
-
 const findByToken = async (token) => {
   const foundUser = await User.findOne({ where: { token } }, { attributes: { exclude: ['password'] } })
   if (!foundUser) {
@@ -49,10 +45,6 @@ const loginOwner = (req, res) => {
 
 const loginCustomer = (req, res) => {
   _login(req, res, 'customer')
-}
-
-const loginRider = (req, res) => {
-  _login(req, res, 'rider')
 }
 
 const show = async (req, res) => {
@@ -155,12 +147,10 @@ const UserController = {
   indexWithRestaurants,
   registerCustomer,
   registerOwner,
-  registerRider,
   findByToken,
   isTokenValid,
   loginOwner,
   loginCustomer,
-  loginRider,
   show,
   update,
   destroy

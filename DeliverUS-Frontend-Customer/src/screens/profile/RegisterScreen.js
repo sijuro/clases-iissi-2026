@@ -121,7 +121,7 @@ export default function RegisterScreen() {
                     name="email"
                     label="Email"
                     textContentType="emailAddress"
-                    placeholder="rider@rider.com"
+                    placeholder="customer@customer.com"
                   />
                   <InputItem
                     name="password"

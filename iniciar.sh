@@ -3,7 +3,7 @@
 # iniciar.sh - Prepara y arranca DeliverUS de un tiron.
 #
 # Uso: ./iniciar.sh [opciones]
-#   (sin opciones)   Prepara el entorno y arranca backend + app Rider
+#   (sin opciones)   Prepara el entorno y arranca backend + app Customer
 #   --all            Arranca tambien la app Owner
 #   --backend-only   Solo prepara el entorno y arranca el backend
 #   --setup-only     Prepara el entorno (deps, .env, BD, migraciones) y sale
@@ -19,14 +19,14 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 BACKEND_DIR="$ROOT_DIR/DeliverUS-Backend"
 OWNER_DIR="$ROOT_DIR/DeliverUS-Frontend-Owner"
-RIDER_DIR="$ROOT_DIR/DeliverUS-Frontend-Rider"
+CUSTOMER_DIR="$ROOT_DIR/DeliverUS-Frontend-Customer"
 
 CONTAINER_NAME="deliverus-mariadb"
 DB_IMAGE="mariadb:11"
 DB_ROOT_PASSWORD="root"
 
 START_OWNER=0
-START_RIDER=1
+START_CUSTOMER=1
 SETUP_ONLY=0
 NO_INSTALL=0
 STOP=0
@@ -75,7 +75,7 @@ trap cleanup EXIT INT TERM
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --all)          START_OWNER=1 ;;
-    --backend-only) START_RIDER=0; START_OWNER=0 ;;
+    --backend-only) START_CUSTOMER=0; START_OWNER=0 ;;
     --setup-only)   SETUP_ONLY=1 ;;
     --no-install)   NO_INSTALL=1 ;;
     --stop)         STOP=1 ;;
@@ -212,9 +212,9 @@ if [[ "$START_OWNER" == "1" ]]; then
   ensure_deps "$OWNER_DIR" "Owner"
 fi
 
-if [[ "$START_RIDER" == "1" ]]; then
-  ensure_env  "$RIDER_DIR" "Rider"
-  ensure_deps "$RIDER_DIR" "Rider"
+if [[ "$START_CUSTOMER" == "1" ]]; then
+  ensure_env  "$CUSTOMER_DIR" "Customer"
+  ensure_deps "$CUSTOMER_DIR" "Customer"
 fi
 
 ensure_db
@@ -233,8 +233,8 @@ if [[ "$START_OWNER" == "1" ]]; then
   FRONTEND_PIDS="${FRONTEND_PIDS:-} $!"
 fi
 
-if [[ "$START_RIDER" == "1" ]]; then
-  info "Arrancando app Rider (Expo)..."
-  printf '\nUsuario de pruebas: rider1@rider.com / secret\n\n'
-  ( cd "$RIDER_DIR" && npm start )
+if [[ "$START_CUSTOMER" == "1" ]]; then
+  info "Arrancando app Customer (Expo)..."
+  printf '\nUsuario de pruebas: customer1@customer.com / secret\n\n'
+  ( cd "$CUSTOMER_DIR" && npm start )
 fi

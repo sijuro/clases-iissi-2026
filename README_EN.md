@@ -1,283 +1,333 @@
-# DeliverUS Exam - Rider Model - Rider Order Management
+# DeliverUS Exam - Coupon Model - Coupon Management by Customers
 
-## Exam Statement
+## Exam statement
 
-Until now DeliverUS had two user types: **customer** (client, who places orders) and **owner** (restaurant owner, who manages their restaurants and confirms/sends/delivers orders). In this exam a **third user type is added: `rider`** (delivery driver).
+Until now DeliverUS had two user types: **customer** (client, who places orders) and **owner** (restaurant owner, who manages their restaurants and confirms/sends/delivers orders). In this exam the customer application (`DeliverUS-Frontend-Customer`) is extended with **coupon management**.
 
-### Who is the rider and what can they do?
+### What is a coupon and what can a customer do?
 
-The rider is the person who picks up orders already confirmed by the owner at the restaurant and delivers them to the customer. It is an independent user type, with its own registration, login, and its own frontend application (`DeliverUS-Frontend-Rider`), just like there are already separate apps for `owner` and `customer`.
+A coupon is a discount code that the customer can apply to one of their **pending** orders. Each coupon has a discount percentage, a minimum order price, an expiry date and a maximum number of uses.
 
-In short, a rider can:
+In short, a customer can:
 
-1. **Register and login** as a rider (`POST /users/registerRider`, `POST /users/loginRider`). *This part is already implemented.*
-2. **View available orders**: those orders that the restaurant has already confirmed (equivalent to no longer being in `pending` state) but that no rider has claimed yet.
-3. **Accept and pick up an available order**: the rider decides to take charge of that order, which becomes assigned to them and is marked as picked up (`sentAt` is set). From that moment it stops appearing in the available list for other riders.
-4. **Deliver it to the customer**: once on the road, the rider marks the order as delivered.
-5. **Add delivery comments**: the rider can write a note about the delivery (e.g. "Left at the door, no answer at the bell").
-6. **View their own orders** (the ones assigned to them), to keep track of which ones they still need to deliver and which ones are already completed.
+1. **Register and login** (`POST /users/register`, `POST /users/login`). *This part is already implemented.*
+2. **View available coupons**: those that have not expired and still have uses left. *This part is already implemented.*
+3. **Apply a coupon to one of their pending orders**: the order becomes associated with the coupon and its price is reduced by the coupon discount. From that moment the coupon stops being available for that order.
+4. **List their orders**, to track the ones not yet delivered and the already delivered ones, and see the coupon applied to each one.
+5. **Remove the coupon** from a pending order, restoring its original price and freeing the coupon use.
+6. **Add delivery instructions**: a note about how to deliver the order (e.g. "Leave at the door, no answer at the bell").
 
-> ⚠️ **Accepting is the only order assignment step.** "Accept" (`accept`) claims the order and sets `sentAt`, moving the order directly to the `Sent` state.
+> ⚠️ **A coupon can only be applied or removed while the order is pending** (that is, before the restaurant confirms it). Confirmed orders cannot change their amount.
 
-### Conceptual modeling
+### Conceptual model
 
-DeliverUS reference class diagram, including the entities and associations to be worked on in this exam.
+Reference class diagram of DeliverUS including the `Coupon` entity and its relationship with `Order` (to be modelled by the students).
 
-![DeliverUS class diagram](images/DeliverUS-ClassDiagram.svg)
+![DeliverUS class diagram](images/CouponClassDiagram.svg)
 
-### The expanded order lifecycle
+### Coupon data model
 
-You already knew the lifecycle `pending → confirmed (startedAt) → sent (sentAt) → delivered (deliveredAt)`, managed by the owner via `confirm`/`send`/`deliver`. With the addition of the rider, the send and delivery steps of an order can also be carried out by a rider (instead of the owner), following this state diagram:
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | INTEGER | Primary key. |
+| `code` | STRING | Unique coupon code (e.g. `WELCOME10`). |
+| `description` | STRING | Coupon description. |
+| `discountPercentage` | INTEGER | Discount percentage (1-100). |
+| `minPrice` | DOUBLE | Minimum order price to be able to apply it. |
+| `expiresAt` | DATE | Expiry date and time. |
+| `maxUses` | INTEGER | Maximum number of uses. |
+| `usedCount` | INTEGER | Number of uses already made. |
 
-![Expanded order lifecycle](images/OrderLifecycle.svg)
+Changes to be made on the order (`Order`): `couponId` (foreign key to `Coupon`), `couponDiscount` (discounted amount) and `customerComments` (delivery instructions text).
 
-The following functional requirements need to be implemented:
+### The coupon in the order lifecycle
 
-> The acceptance tests for each FR are split into **Backend** (verified with the help of `riderOrders.test.js`, which must not be modified) and **Frontend** (behavior that must be observed when using the application: navigation after an action and success/error messages).
+The order lifecycle remains `pending → confirmed (startedAt) → sent (sentAt) → delivered (deliveredAt)`, managed by the owner via `confirm`/`send`/`deliver`. The coupon is applied **only** while `pending` (no `startedAt`) and, when applied, the new order price is computed as:
 
-### **FR1. View available orders**. **ALREADY IMPLEMENTED**
+```
+couponDiscount = round(price * discountPercentage / 100, 2)
+price = price - couponDiscount
+```
 
-**As** a rider,
+When the coupon is removed, the price goes back to its original value (`price + couponDiscount`) and `couponId` and `couponDiscount` are set to `null`.
 
-**I want** to see the list of already confirmed orders that no rider has claimed yet
+The following functional requirements must be implemented:
 
-**so that** I can choose which one I am going to deliver.
+> The acceptance tests for each FR are split into **Backend** (verified with the help of `coupons.test.js`, which must not be modified) and **Frontend** (behavior that must be observed when using the application: navigation after an action and success/error messages).
 
-**Acceptance tests — Backend** (`GET /orders/available`):
+### **FR1. View available coupons**. **ALREADY IMPLEMENTED**
 
-- Without a session: `401 Unauthorized`.
-- With a session as `customer` or `owner`: `403 Forbidden`.
-- With a session as `rider`: `200 OK` and an array of orders.
-- An order in `pending` state (without `startedAt`, not confirmed by the owner) must not appear in the list.
-- A `sent` order — i.e. with `sentAt` set — must not appear in the list either.
-- Each returned order must include summarized restaurant data (`name`, `address`, `postalCode`) and customer data (`firstName`).
+**As** a customer,
 
-**Acceptance tests — Frontend** (`AvailableOrdersScreen.js`, already implemented, for reference):
+**I want** to see the list of valid coupons that still have uses left
 
-- Entering the "Available orders" tab loads the list automatically.
+**so that** I can choose which one to apply to my order.
+
+**Acceptance tests — Backend** (`GET /coupons/available`):
+
+- Not logged in: `401 Unauthorized`.
+- Logged in as `owner`: `403 Forbidden`.
+- Logged in as `customer`: `200 OK` and an array of coupons.
+- An expired coupon (`expiresAt` in the past) must not appear in the list.
+- A coupon with no uses left (`usedCount` greater than or equal to `maxUses`) must not appear either.
+
+**Acceptance tests — Frontend** (`AvailableCouponsScreen.js`, already implemented, for reference):
+
+- Entering the "Available coupons" tab loads the list automatically.
 - If the request fails, an error message is shown and the previous list is kept.
 
-### **FR2. Accept an order**
+### **FR2. Apply a coupon**
 
-**As** a rider,
+**As** a customer,
 
-**I want** to claim an available order and mark it as picked up
+**I want** to apply a coupon to one of my pending orders
 
-**so that** I become assigned to it and can start delivering it.
+**so that** I pay less for that order.
 
-**Acceptance tests — Backend** (`PATCH /orders/:orderId/accept`):
+**Acceptance tests — Backend** (`PATCH /orders/:orderId/applyCoupon`):
 
-- Without a session: `401 Unauthorized`.
-- With a session as `customer` or `owner`: `403 Forbidden`.
+- Not logged in: `401 Unauthorized`.
+- Logged in as `owner`: `403 Forbidden`.
+- Order that does not belong to the authenticated customer: `403 Forbidden`.
 - Nonexistent order: `404 Not Found`.
-- Order in `pending` state (not confirmed): `409 Conflict`.
-- Order already assigned to a rider: `409 Conflict`.
-- Success: `200 OK`, and the returned order has `riderId` equal to the authenticated rider's id and `sentAt` set to the acceptance timestamp.
+- Missing or empty `code` in the request body: `422 Unprocessable Entity`.
+- Nonexistent coupon: `404 Not Found`.
+- Order that is not pending (already has `startedAt`): `409 Conflict`.
+- Order that already has a coupon applied: `409 Conflict`.
+- Order whose `price` is below the coupon `minPrice`: `409 Conflict`.
+- Expired coupon: `409 Conflict`.
+- Coupon with no uses left: `409 Conflict`.
+- Success: `200 OK`, and the returned order has `couponId` equal to the coupon id, `couponDiscount` equal to the discounted amount, `price` reduced by that amount, and the coupon `usedCount` increased by 1.
 
-**Acceptance tests — Frontend** (`AvailableOrdersScreen.js`, already implemented, for reference):
+**Acceptance tests — Frontend** (`EditOrderScreen`, **Exercise 5**):
 
-- Pressing "Accept order" and receiving a successful response: a success message is shown, the available orders list is refreshed (the accepted order disappears), and navigation switches to the "My orders" tab.
-- If acceptance fails (e.g. another rider accepted it first): an error message is shown and the app stays on the available orders screen, without navigating.
+- The screen has a form with the coupon code.
+- On success: a success message is shown and the displayed order is refreshed, so the new price and the discount become visible.
+- If the action fails (invalid code, coupon not applicable, etc.): an error message is shown and the app stays on the screen.
 
-### **FR3. View my orders**
+### **FR3. List my orders**
 
-**As** a rider,
+**As** a customer,
 
-**I want** to see the list of orders assigned to me
+**I want** to see the list of orders I have placed
 
-**so that** I can track my pending and completed work, and easily access the orders I need to deliver or comment on.
+**so that** I can track the ones not yet delivered and the already delivered ones, and easily reach the orders I can act on.
 
-**Acceptance tests — Backend** (`GET /orders/rider`):
+**Acceptance tests — Backend** (`GET /orders/customer`):
 
-- Without a session: `401 Unauthorized`.
-- With a session as `customer` or `owner`: `403 Forbidden`.
-- With a session as `rider`: `200 OK` and an array of orders.
-- The list must include only orders whose `riderId` is the authenticated rider's (never orders belonging to other riders).
-- Orders pending delivery (`deliveredAt` is `null`) must be listed before already delivered ones.
+- Not logged in: `401 Unauthorized`.
+- Logged in as `owner`: `403 Forbidden`.
+- Logged in as `customer`: `200 OK` and an array of orders.
+- The list must include only orders whose `userId` is the authenticated customer's (never orders of other customers).
+- Orders not yet delivered (`deliveredAt` is `null`) must be listed before the delivered ones.
 
 **Acceptance tests — Frontend** ("My Orders" screen, **Exercise 4**):
 
-- Each order is shown with the restaurant logo, the order id, the restaurant name, delivery details (customer, phone, address) and the price.
-- Tapping the `ImageCard` of an order navigates to the `EditOrderCommentsScreen`.
-- The list is reloaded when returning from the comments screen (`EditOrderCommentsScreen`), not only the first time the screen mounts.
-- If the rider has no assigned orders, a message stating so is shown instead of an empty list.
+- Each order is shown with the restaurant logo, the order id, the restaurant name, the delivery address and the price.
+- If the order has a coupon applied, its code and/or the applied discount is shown.
+- Tapping the `ImageCard` of each order navigates to the `EditOrderScreen`.
+- The list reloads when coming back from `EditOrderScreen`, not only the first time the screen is mounted.
+- If the customer has no orders, a message stating so is shown instead of an empty list.
 - If the request fails, an error message is shown.
 
-### **FR4. Deliver an order**
+### **FR4. Remove a coupon**
 
-**As** a rider,
+**As** a customer,
 
-**I want** to mark an order as delivered to the customer
+**I want** to remove the coupon from a pending order
 
-**so that** it reflects that the delivery has finished.
+**so that** I stop applying a discount I no longer want to use.
 
-**Acceptance tests — Backend** (`PATCH /orders/:orderId/riderDeliver`):
+**Acceptance tests — Backend** (`PATCH /orders/:orderId/removeCoupon`):
 
-- Without a session: `401 Unauthorized`.
-- With a session as `customer` or `owner`: `403 Forbidden`.
+- Not logged in: `401 Unauthorized`.
+- Logged in as `owner`: `403 Forbidden`.
+- Order that does not belong to the authenticated customer: `403 Forbidden`.
 - Nonexistent order: `404 Not Found`.
-- Order assigned to another rider: `403 Forbidden` (the authenticated rider is not the order's `riderId`).
-- Order that is not yet in `Sent` state, or already delivered: `409 Conflict`.
-- Success: `200 OK`, with `deliveredAt` set to the delivery timestamp.
+- Order that is not pending (already has `startedAt`): `409 Conflict`.
+- Order that has no coupon applied: `409 Conflict`.
+- Success: `200 OK`, with `couponId` and `couponDiscount` set to `null`, the `price` restored to its original value and the coupon `usedCount` decreased by 1.
 
 **Acceptance tests — Frontend** ("My Orders" screen, **Exercise 4**):
 
-- An order that has been accepted but not delivered shows the "Confirm delivery" button (`brandGreen` color).
-- Pressing it successfully: a success message is shown and the list is refreshed **on the same screen**; the updated order stops showing any button, since it is now delivered.
+- A pending order with a coupon shows the "Remove coupon" button (colour `brandGreen`).
+- On success: a success message is shown and the list is refreshed **on the same screen**; the updated order stops showing the discount and the button.
 - If the action fails: an error message is shown and the list is not modified.
 
-### **FR5. Comment on an order**
+### **FR5. Add delivery instructions**
 
-**As** a rider,
+**As** a customer,
 
-**I want** to add or edit a note about the delivery of an order assigned to me
+**I want** to add or edit a note about the delivery of one of my orders
 
-**so that** I can record incidents (e.g. where the order was left).
+**so that** I can tell the delivery driver how to deliver it (e.g. where to leave it).
 
-**Acceptance tests — Backend** (`PATCH /orders/:orderId/riderComments`):
+**Acceptance tests — Backend** (`PATCH /orders/:orderId/customerComments`):
 
-- Without a session: `401 Unauthorized`.
-- With a session as `customer` or `owner`: `403 Forbidden`.
-- Order assigned to another rider: `403 Forbidden`.
+- Not logged in: `401 Unauthorized`.
+- Logged in as `owner`: `403 Forbidden`.
+- Order that does not belong to the authenticated customer: `403 Forbidden`.
 - Nonexistent order: `404 Not Found`.
-- `riderComments` exceeds 500 characters: `422 Unprocessable Entity`.
-- `riderComments` empty, `null` or absent: valid, `200 OK` (the comment is optional).
-- Success: `200 OK`, with the returned order reflecting the new `riderComments`.
+- `customerComments` exceeds 500 characters: `422 Unprocessable Entity`.
+- `customerComments` empty, `null` or absent: valid, `200 OK` (the comment is optional).
+- Success: `200 OK`, with the returned order reflecting the new `customerComments`.
 
-**Acceptance tests — Frontend** (comments screen, **Exercise 4**):
+**Acceptance tests — Frontend** (`EditOrderScreen`, **Exercise 5**):
 
-- This screen is reached by tapping an order's card in the "My Orders" list.
-- The form is initialized with the order's already saved comment (or empty if it had none).
-- If the user types more than 500 characters, the frontend application must show a validation error **before** sending the request, and the save button must not complete the submission. In any case, the backend application must also ensure the comment does not exceed 500 characters and display errors sent back by the backend.
-- On successful save: a success message is shown and navigation returns to the "My Orders" list (`MyOrdersScreen`).
-- If saving fails (e.g. server or connection error): an error message is shown and the form stays open, without losing what was typed.
+- This screen is reached by tapping an order card in the "My Orders" list.
+- The instructions form is initialised with the order's already saved comment (or empty if it had none).
+- If the user types more than 500 characters, the frontend must show a validation error **before** sending the request, and the save button must not complete the submission. In any case, the backend must also ensure the comment does not exceed 500 characters and show the errors sent by the backend.
+- On success: a success message is shown and the app navigates back to the "My Orders" list (`MyOrdersScreen`).
+- If saving fails (e.g. server or connection error): an error message is shown and the app stays on the form, without losing what was typed.
 
 ---
 
-## Backend Part
+## Backend part
 
 ### Exercises (Backend)
 
 #### 1. Migrations and Models (1 point)
 
-Make the necessary changes to migrations and models to implement **FR2. Accept an order** and **FR5. Comment on an order**.
+Make the necessary changes in migrations and models to implement the association between orders and coupons, and the delivery instructions:
+
+- Add to `Order` the columns `couponId` (foreign key to `Coupons`), `couponDiscount` and `customerComments`.
+- Add the association `Order.belongsTo(Coupon)` (with alias `coupon`).
+
+Remember to modify both the `create-order` migration and the `Order.js` model.
 
 #### 2. Routing, Middlewares and Validation (2 points)
 
-In `src/routes/OrderRoutes.js` add the new routes needed to implement the following functional requirements:
+In `src/routes/OrderRoutes.js` add the new routes to implement the following functional requirements:
 
-- **FR2. Accept an order**
-- **FR3. View my orders**
-- **FR4. Deliver an order**
-- **FR5. Comment on an order**
+- **FR2. Apply a coupon**
+- **FR3. List my orders**
+- **FR4. Remove a coupon**
+- **FR5. Add delivery instructions**
 
 In `src/middlewares/OrderMiddleware.js`, implement the following new middlewares:
 
-- `checkOrderCanBeAccepted` to fulfill **FR2. Accept an order**
-- `checkOrderCanBeDeliveredByRider` to fulfill **FR4. Deliver an order**
-- `checkOrderIsAssignedToRider` to fulfill **FR5. Comment on an order**
+- `checkOrderBelongsToCustomer` to check that the order belongs to the authenticated customer (used in **FR2**, **FR4** and **FR5**).
+- `checkOrderCanBeCouponApplied` to fulfil **FR2. Apply a coupon** (pending order, no previous coupon, existing coupon, not expired, with uses left and minimum price reached).
+- `checkOrderCanRemoveCoupon` to fulfil **FR4. Remove a coupon** (pending order with a coupon applied).
 
-In `src/controllers/validation/OrderValidation.js`, add the `updateRiderComments` validation rules needed to fulfill **FR5**.
+In `src/controllers/validation/OrderValidation.js`, add the validation rules:
 
-> The middlewares `checkOrderVisible`, `checkOrderIsPending`, `checkOrderCanBeSent`, `checkOrderCanBeDelivered` and `checkOrderOwnership`, as well as `handleValidation`, are already implemented and you may use them as reference if needed.
+- `applyCoupon` needed for **FR2** (the `code` is required).
+- `updateCustomerComments` needed for **FR5**.
 
-> To deliver (`riderDeliver`) an order **you do not need to write a new controller function**: reuse the `deliver` controller function in `OrderController` that the owner already uses for the same state transition, routing it also from the rider's new route.
+> The middlewares `checkOrderVisible`, `checkOrderIsPending`, `checkOrderCanBeSent`, `checkOrderCanBeDelivered` and `checkOrderOwnership`, as well as `handleValidation`, are already implemented and can be used as reference if needed.
+
+> As a route order reference, `PATCH /orders/:orderId/applyCoupon` goes through: `isLoggedIn`, `hasRole('customer')`, `checkEntityExists(Order, 'orderId')`, `checkOrderBelongsToCustomer`, the `applyCoupon` validation rules, `handleValidation`, `checkOrderCanBeCouponApplied` and, finally, the controller.
+
+> Keep in mind that `GET /orders/customer` must be registered **before** `GET /orders/:orderId`, so that Express does not interpret `customer` as an `orderId`.
 
 #### 3. Controllers (2 points)
 
 In `src/controllers/OrderController.js`:
 
-- Implement `accept` to fulfill **FR2. Accept an order**.
-- Implement `indexRider` to fulfill **FR3. View my orders**.
-- Implement `updateRiderComments` to fulfill **FR5. Comment on an order**.
-
-> To deliver (`riderDeliver`) an order **you do not need to write new controllers**: reuse the `deliver` controller that the owner already uses for the same state transition, routing it also from the rider's new route.
+- Implement `applyCoupon` to fulfil **FR2. Apply a coupon**.
+- Implement `indexCustomer` to fulfil **FR3. List my orders** (currently returns `500`).
+- Implement `removeCoupon` to fulfil **FR4. Remove a coupon**.
+- Implement `updateCustomerComments` to fulfil **FR5. Add delivery instructions**.
 
 ---
 
 ### Provided Code (Backend)
 
-For this exam, the following is already provided implemented:
+For this exam, the following is already implemented:
 
-1. Rider registration and login (`registerRider`/`loginRider`, in `UserController.js` and `UserRoutes.js`).
-2. The check that a rider can view the detail of any order (`rider` branch of `checkOrderVisible`, in `OrderMiddleware.js`).
-3. The `confirm`, `send`, `deliver` and `show` controllers, which you may reuse if needed.
-4. The user seeder already includes a test rider: `rider1@rider.com` / `secret`.
-5. The `findAvailableOrders` controller function in `OrderController.js`, as part of the implementation of **FR1. View available orders**.
+1. Customer registration and login (`registerCustomer`/`loginCustomer`, in `UserController.js` and `UserRoutes.js`).
+2. The `Coupon` model (`src/models/Coupon.js`), its migration (`create-coupon`) and its seeder, including sample coupons (`WELCOME10`, `SUMMER20`, `LASTONE`).
+3. The `findAvailableCoupons` controller and the `GET /coupons/available` route (**FR1. View available coupons**).
+4. The check that a customer can view the detail of their own orders (`checkOrderCustomer`, in `OrderMiddleware.js`).
+5. The `confirm`, `send`, `deliver` and `show` controllers, which you may reuse if needed.
+6. The user seeder already includes a test customer: `customer1@customer.com` / `secret`.
 
 ---
 
-## Frontend Part (Rider application)
+## Frontend part (Customer app)
 
-Implement the screens needed in `DeliverUS-Frontend-Rider` so that a rider can use the application.
-**NOTE: only what can be used just as an end user would will be graded. Screens that do not render or functionality that cannot be tested from the interface will not be graded.**
+Implement the screens needed in `DeliverUS-Frontend-Customer` so that a customer can use the application.
+**NOTE: only what can be used as an end user would use it will be assessed. Screens that do not render or features that cannot be tested from the interface will not be assessed**
 
 ### Exercises (Frontend)
 
 #### 4. "My Orders" list screen (2 points)
 
-<p align="center"><img src="images/RF3-4-5-myOrders.png" alt="My Orders screen" style="max-width:500px;width:100%;" /></p>
+**Screen**: `src/screens/customerOrders/MyOrdersScreen.js`
 
-**Screen**: `src/screens/riderOrders/MyOrdersScreen.js`
+Implement this screen to fulfil **FR3. List my orders** and **FR4. Remove a coupon**. Use the `ImageCard` component for each order. You can use `AvailableCouponsScreen.js` as inspiration.
 
-Implement this screen to fulfill **FR3. View my orders** and **FR4. Deliver an order**. Use the `ImageCard` component for each order. You may use `AvailableOrdersScreen.js` as inspiration.
+**Backend API needed** (add the missing functions in `src/api/OrderEndpoints.js`):
 
-**Required Backend API** (add the missing functions in `src/api/OrderEndpoints.js`):
+- `GET /orders/customer`
+- `PATCH /orders/:orderId/removeCoupon`
 
-- `GET /orders/rider`
-- `PATCH /orders/:orderId/riderDeliver`
+#### 5. Order detail and coupon screen (2 points)
 
-#### 5. Order comments form (2 points)
+**Screen**: `src/screens/customerOrders/EditOrderScreen.js`
 
-<p align="center"><img src="images/RF5-riderComments.png" alt="EditOrderComments screen" style="max-width:500px;width:100%;" /></p>
+You already have a version of this screen showing a header with restaurant and order data, and the product list. Add two forms with `Formik` and a `yup` validation schema:
 
-**Screen**: `src/screens/riderOrders/EditOrderCommentsScreen.js`
+- a form to **apply a coupon** (**FR2**) with the coupon code, and
+- a form to **add the delivery instructions** (**FR5**),
 
-You are already given a version of this screen showing a header with restaurant and order data, and a list of products. Add a form with `Formik` and a `yup` validation schema, to fulfill **FR5. Comment on an order**, and display any validation errors sent back from the backend. Also register this screen in `MyOrdersStack.js` so it is reachable from `MyOrdersScreen` by tapping on an order.
+showing any backend validation errors. Also register this screen in `CustomerOrdersStack.js` so it is reachable from `MyOrdersScreen` by tapping an order.
 
-**Required Backend API** (add the missing function in `src/api/OrderEndpoints.js`):
+**Backend API needed** (add the missing functions in `src/api/OrderEndpoints.js`):
 
-- `PATCH /orders/:orderId/riderComments`
+- `PATCH /orders/:orderId/applyCoupon`
+- `PATCH /orders/:orderId/customerComments`
 
-#### Visual fidelity (1 point)
+#### Aesthetic fidelity (1 point)
 
-The degree of visual similarity of the delivered interfaces with respect to the provided screenshots will be evaluated.
+The degree of visual similarity of the delivered interfaces with the existing screens of the application itself will be assessed.
 
-For this, also take the following into account:
+To that end, also take into account the following:
 
-- Use the corporate colors defined in `src/styles/GlobalStyles.js` (`brandBlue`/`brandBlueTap`, `brandGreen`/`brandGreenTap`, `brandPrimary`) and the `MaterialCommunityIcons` icons (package `@expo/vector-icons`) already used in the rest of the application, keeping a style consistent with the existing screens (`AvailableOrdersScreen.js`, `OrderDetailScreen.js`).
+- Use the corporate colours defined in `src/styles/GlobalStyles.js` (`brandBlue`/`brandBlueTap`, `brandGreen`/`brandGreenTap`, `brandPrimary`) and the `MaterialCommunityIcons` icons (package `@expo/vector-icons`) already used in the rest of the application, keeping a style consistent with the existing screens (`AvailableCouponsScreen.js`, `EditOrderScreen.js`).
 - The specific `MaterialCommunityIcons` icons to use are:
 
 | Icon | Where |
 | --- | --- |
-| `package-variant-closed-check` | "Confirm delivery" button (Exercise 4). |
-| `map-marker` | Customer's delivery address, in each order card (Exercise 4) and in the order header (Exercise 5). |
-| `cash` | Order price, in each order card (Exercise 4) and in the order header (Exercise 5). |
-| `comment-text` | "Save comment" button (Exercise 5). |
+| `ticket-percent` | "Apply coupon" button (Exercise 5). |
+| `map-marker` | Order delivery address, on each order card (Exercise 4) and in the order header (Exercise 5). |
+| `cash` | Order price, on each order card (Exercise 4) and in the order header (Exercise 5). |
+| `comment-text` | "Save comments" button (Exercise 5). |
 
-### Provided Code (Rider Frontend)
+### Provided Code (Customer Frontend)
 
-For this exam, the following is already provided implemented:
+For this exam, the following is already implemented:
 
-1. Rider registration, login and profile (`LoginScreen.js`, `RegisterScreen.js`, `ProfileScreen.js` and their navigation).
-2. The available orders screen (`AvailableOrdersScreen.js`), including the button to accept (`acceptOrder`) an order.
-3. The functions already existing in `src/api/OrderEndpoints.js`: `getAvailableOrders`, `getOrderDetail`, `acceptOrder`.
-4. The base structure (header with restaurant data and product list) of `EditOrderCommentsScreen.js`, to which you only need to add the form.
+1. Customer registration, login and profile (`LoginScreen.js`, `RegisterScreen.js`, `ProfileScreen.js` and their navigation).
+2. The available coupons screen (`AvailableCouponsScreen.js`).
+3. The existing functions in `src/api/CouponEndpoints.js` (`getAvailableCoupons`) and in `src/api/OrderEndpoints.js` (`getOrderDetail`).
+4. The base structure (header with restaurant data and product list) of `EditOrderScreen.js`, to which you only need to add the forms.
 5. The `InputItem` component, already prepared to integrate with Formik.
 
 ---
 
 ## Request/response format
 
-The status codes and business rules for each endpoint are described in the corresponding FR. Only the shape of the data that is not obvious from the FRs is detailed here.
+The status codes and business rules of each endpoint are described in the corresponding FR. Here only the shape of the data that is not obvious from the FRs is detailed.
 
-### PATCH /orders/:orderId/riderComments (FR5)
+### PATCH /orders/:orderId/applyCoupon (FR2)
 
 **Request**:
 
 ```json
 {
-  "riderComments": "Left at the door, no answer at the bell"
+  "code": "WELCOME10"
+}
+```
+
+### PATCH /orders/:orderId/customerComments (FR5)
+
+**Request**:
+
+```json
+{
+  "customerComments": "Left at the door, no answer at the bell"
 }
 ```
 
@@ -285,10 +335,10 @@ The status codes and business rules for each endpoint are described in the corre
 
 ## Submission procedure
 
-1. Delete the **node_modules** folder from the backend and both frontends.
-2. Create a ZIP including the whole project. **Important: Check that the ZIP is not the same one you downloaded and that it includes your solution.**
-3. Notify the instructor before submitting.
-4. When the instructor gives you the go-ahead, you can upload the ZIP to the Virtual Learning platform. **It is very important to wait for the platform to show you a link to the ZIP before pressing the submit button**. It is recommended to download that ZIP to check what has been uploaded. Once you have checked it, you can submit the exam.
+1. Delete the **node_modules** folder of the backend and both frontends.
+2. Create a ZIP that includes the whole project. **Important: check that the ZIP is not the same one you downloaded and includes your solution**
+3. Tell the teacher before submitting.
+4. Once the teacher gives you the go-ahead, you can upload the ZIP to the Virtual Teaching platform. **It is very important to wait until the platform shows you a link to the ZIP before pressing the send button**. It is recommended to download that ZIP to check what has been uploaded. Once the check is done, you can send the exam.
 
 ## Environment setup
 
@@ -296,7 +346,7 @@ The status codes and business rules for each endpoint are described in the corre
 
 - Open a terminal and run the command `npm run install:all:win`.
 
-### b) Linux/MacOS
+### b) Linux/macOS
 
 - Open a terminal and run the command `npm run install:all:bash`.
 
@@ -304,38 +354,38 @@ The status codes and business rules for each endpoint are described in the corre
 
 ### 1. Backend
 
-- To **redo the migrations and seeders**, open a terminal and run the command
+- To **redo the migrations and seeders**, open a terminal and run:
 
     ```Bash
     npm run migrate:backend
     ```
 
-- To **run it**, open a terminal and run the command
+- To **run it**, open a terminal and run:
 
     ```Bash
     npm run start:backend
     ```
 
-### 2. Rider Frontend
+### 2. Customer Frontend
 
-- With the backend running, open another terminal and run the command
+- With the backend running, open another terminal and run:
 
     ```Bash
-    npm run start:frontend:rider
+    npm run start:frontend:customer
     ```
 
-- You can log in with the test user `rider1@rider.com` / `secret`, or register a new rider from the app itself.
+- You can log in with the test user `customer1@customer.com` / `secret`, or register a new customer from the application itself.
 
 ## Debugging
 
-- To **debug the backend**, make sure there is **NO** instance already running, click the `Run and Debug` button in the sidebar, select `Debug Backend` from the dropdown list, and press the *Play* button.
+- To **debug the backend**, make sure there is **NO** running instance, click the `Run and Debug` button in the sidebar, select `Debug Backend` from the dropdown list, and click the *Play* button.
 
 ## Test
 
-- As a help, you can run the included test suite `riderOrders.test.js`, which covers rider registration/login and the whole order lifecycle managed by the rider (available orders, accept, deliver, comments and own listing). To do so, run the following command:
+- As a help you can run the included test suite `coupons.test.js`, which covers customer registration/login, available coupons, applying and removing coupons, listing your own orders and delivery instructions. To do so run:
 
     ```Bash
     npm run test:backend
     ```
 
-**Warning: Tests must not be modified.**
+**Warning: the tests cannot be modified.**

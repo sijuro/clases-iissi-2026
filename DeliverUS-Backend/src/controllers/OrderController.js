@@ -63,35 +63,6 @@ const generateFilterWhereClauses = function (req) {
   return filterWhereClauses
 }
 
-const findAvailableOrders = async function (req, res) {
-  try {
-    const availableOrders = await Order.findAll({
-      where: {
-        startedAt: { [Op.ne]: null },
-        sentAt: null,
-        deliveredAt: null
-      },
-      include: [{
-        model: Restaurant,
-        as: 'restaurant',
-        attributes: ['name', 'address', 'postalCode', 'logo']
-      },
-      {
-        model: User,
-        as: 'user',
-        attributes: ['firstName', 'phone']
-      }
-      ],
-      order: [
-        ['createdAt', 'ASC']
-      ]
-    })
-    return res.json(availableOrders)
-  } catch (err) {
-    return res.status(500).send(err)
-  }
-}
-
 // Returns :restaurantId orders
 const indexRestaurant = async function (req, res) {
   const whereClauses = generateFilterWhereClauses(req)
@@ -250,7 +221,6 @@ const OrderController = {
   send,
   deliver,
   show,
-  analytics,
-  findAvailableOrders
+  analytics
 }
 export default OrderController

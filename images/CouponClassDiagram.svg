@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="580" viewBox="0 0 980 580" font-family="Helvetica, Arial, sans-serif">
+  <style>
+    .cls { fill: #ffffff; stroke: #37474f; stroke-width: 2; rx: 6; }
+    .title { fill: #be0f2e; }
+    .titleText { fill: #ffffff; font-size: 15px; font-weight: bold; }
+    .attr { fill: #263238; font-size: 12.5px; }
+    .rel { stroke: #37474f; stroke-width: 1.6; fill: none; }
+    .relLabel { fill: #455a64; font-size: 12px; }
+    .note { fill: #6d4c41; font-size: 12px; font-style: italic; }
+  </style>
+
+  <!-- User -->
+  <g transform="translate(20,30)">
+    <rect class="cls" width="230" height="150" />
+    <rect class="title" width="230" height="26" rx="6" />
+    <text class="titleText" x="12" y="18">User</text>
+    <text class="attr" x="12" y="48">id</text>
+    <text class="attr" x="12" y="68">firstName</text>
+    <text class="attr" x="12" y="88">lastName</text>
+    <text class="attr" x="12" y="108">email</text>
+    <text class="attr" x="12" y="128">userType</text>
+  </g>
+
+  <!-- Restaurant -->
+  <g transform="translate(20,350)">
+    <rect class="cls" width="230" height="150" />
+    <rect class="title" width="230" height="26" rx="6" />
+    <text class="titleText" x="12" y="18">Restaurant</text>
+    <text class="attr" x="12" y="48">id</text>
+    <text class="attr" x="12" y="68">name</text>
+    <text class="attr" x="12" y="88">address</text>
+    <text class="attr" x="12" y="108">postalCode</text>
+    <text class="attr" x="12" y="128">shippingCosts</text>
+  </g>
+
+  <!-- Order -->
+  <g transform="translate(370,80)">
+    <rect class="cls" width="250" height="380" />
+    <rect class="title" width="250" height="26" rx="6" />
+    <text class="titleText" x="12" y="18">Order</text>
+    <text class="attr" x="12" y="48">id</text>
+    <text class="attr" x="12" y="68">createdAt</text>
+    <text class="attr" x="12" y="88">startedAt</text>
+    <text class="attr" x="12" y="108">sentAt</text>
+    <text class="attr" x="12" y="128">deliveredAt</text>
+    <text class="attr" x="12" y="148">price</text>
+    <text class="attr" x="12" y="168">address</text>
+    <text class="attr" x="12" y="188">shippingCosts</text>
+    <text class="attr" x="12" y="208">userId</text>
+    <text class="attr" x="12" y="228">restaurantId</text>
+    <text class="attr" x="12" y="256" font-weight="bold">couponId</text>
+    <text class="attr" x="12" y="276" font-weight="bold">couponDiscount</text>
+    <text class="attr" x="12" y="296" font-weight="bold">customerComments</text>
+  </g>
+
+  <!-- Coupon -->
+  <g transform="translate(720,80)">
+    <rect class="cls" width="230" height="240" />
+    <rect class="title" width="230" height="26" rx="6" />
+    <text class="titleText" x="12" y="18">Coupon</text>
+    <text class="attr" x="12" y="48">id</text>
+    <text class="attr" x="12" y="68">code</text>
+    <text class="attr" x="12" y="88">description</text>
+    <text class="attr" x="12" y="108">discountPercentage</text>
+    <text class="attr" x="12" y="128">minPrice</text>
+    <text class="attr" x="12" y="148">expiresAt</text>
+    <text class="attr" x="12" y="168">maxUses</text>
+    <text class="attr" x="12" y="188">usedCount</text>
+  </g>
+
+  <!-- Product -->
+  <g transform="translate(720,400)">
+    <rect class="cls" width="230" height="150" />
+    <rect class="title" width="230" height="26" rx="6" />
+    <text class="titleText" x="12" y="18">Product</text>
+    <text class="attr" x="12" y="48">id</text>
+    <text class="attr" x="12" y="68">name</text>
+    <text class="attr" x="12" y="88">description</text>
+    <text class="attr" x="12" y="108">price</text>
+    <text class="attr" x="12" y="128">availability</text>
+  </g>
+
+  <!-- Relations -->
+  <path class="rel" d="M250,105 L370,180" />
+  <text class="relLabel" x="258" y="98">1</text>
+  <text class="relLabel" x="345" y="175">*</text>
+  <text class="relLabel" x="262" y="145">places</text>
+
+  <path class="rel" d="M250,425 L370,330" />
+  <text class="relLabel" x="258" y="418">1</text>
+  <text class="relLabel" x="345" y="345">*</text>
+  <text class="relLabel" x="262" y="388">receives</text>
+
+  <path class="rel" d="M620,160 L720,150" />
+  <text class="relLabel" x="650" y="150">*</text>
+  <text class="relLabel" x="700" y="145">1</text>
+  <text class="relLabel" x="645" y="180">applies</text>
+
+  <path class="rel" d="M620,400 L720,460" />
+  <text class="relLabel" x="648" y="418">*</text>
+  <text class="relLabel" x="700" y="455">*</text>
+  <text class="relLabel" x="645" y="445">contains</text>
+
+  <text class="note" x="20" y="545">Los atributos en negrita (couponId, couponDiscount, customerComments) y la entidad Coupon deben modelarse en este examen.</text>
+</svg>

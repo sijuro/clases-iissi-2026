@@ -23,7 +23,7 @@ const commands = [
     args: ['ci', '--offline', '--cache', '../.npm-cache-deliverus', '--prefer-offline', '--no-audit', '--no-fund'],
   },
   {
-    cwd: path.join(root, 'DeliverUS-Frontend-Rider'),
+    cwd: path.join(root, 'DeliverUS-Frontend-Customer'),
     command: npmCommand,
     args: ['ci', '--offline', '--cache', '../.npm-cache-deliverus', '--prefer-offline', '--no-audit', '--no-fund'],
   },

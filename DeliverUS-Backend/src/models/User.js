@@ -66,8 +66,7 @@ const loadModel = (sequelize, DataTypes) => {
       type: DataTypes.ENUM,
       values: [
         'customer',
-        'owner',
-        'rider'
+        'owner'
       ]
     },
     createdAt: {

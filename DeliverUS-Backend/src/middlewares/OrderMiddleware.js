@@ -1,7 +1,15 @@
 import { Order, Restaurant } from '../models/models.js'
 
 const checkOrderCustomer = async (req, res, next) => {
-  return next()
+  try {
+    const order = await Order.findByPk(req.params.orderId)
+    if (order && order.userId === req.user.id) {
+      return next()
+    }
+    return res.status(403).send('Not enough privileges. This order does not belong to you')
+  } catch (err) {
+    return res.status(500).send(err)
+  }
 }
 
 const checkRestaurantExists = async (req, res, next) => {
@@ -28,15 +36,12 @@ const checkOrderOwnership = async (req, res, next) => {
 
 const checkOrderVisible = (req, res, next) => {
   if (req.user.userType === 'owner') {
-    checkOrderOwnership(req, res, next)
-  } else if (req.user.userType === 'customer') {
-    checkOrderCustomer(req, res, next)
-  } else if (req.user.userType === 'rider') {
-    return next()
-  } else {
-    return res.status(403).send('Not enough privileges')
+    return checkOrderOwnership(req, res, next)
   }
-
+  if (req.user.userType === 'customer') {
+    return checkOrderCustomer(req, res, next)
+  }
+  return res.status(403).send('Not enough privileges')
 }
 
 const checkOrderIsPending = async (req, res, next) => {

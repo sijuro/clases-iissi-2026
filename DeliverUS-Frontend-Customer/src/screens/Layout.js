@@ -3,8 +3,8 @@ import { NavigationContainer } from '@react-navigation/native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useContext, useEffect } from 'react'
 import * as GlobalStyles from '../styles/GlobalStyles'
-import AvailableOrdersStack from './availableOrders/AvailableOrdersStack'
-import MyOrdersStack from './riderOrders/MyOrdersStack'
+import AvailableCouponsStack from './availableCoupons/AvailableCouponsStack'
+import CustomerOrdersStack from './customerOrders/CustomerOrdersStack'
 import ProfileStack from './profile/ProfileStack'
 
 import {
@@ -76,10 +76,10 @@ export default function Layout() {
             screenOptions={({ route }) => ({
               tabBarIcon: ({ color, size }) => {
                 let iconName
-                if (route.name === 'Available orders') {
-                  iconName = 'clipboard-list-outline'
+                if (route.name === 'Available coupons') {
+                  iconName = 'ticket-percent-outline'
                 } else if (route.name === 'My orders') {
-                  iconName = 'moped'
+                  iconName = 'receipt-text-outline'
                 } else if (route.name === 'Profile') {
                   iconName = 'account-circle'
                 }
@@ -94,8 +94,11 @@ export default function Layout() {
               headerShown: false
             })}
           >
-            <Tab.Screen name="Available orders" component={AvailableOrdersStack} />
-            <Tab.Screen name="My orders" component={MyOrdersStack} />
+            <Tab.Screen
+              name="Available coupons"
+              component={AvailableCouponsStack}
+            />
+            <Tab.Screen name="My orders" component={CustomerOrdersStack} />
             <Tab.Screen name="Profile" component={ProfileStack} />
           </Tab.Navigator>
           <FlashMessage position="top" />
@@ -104,4 +107,3 @@ export default function Layout() {
     </>
   )
 }
-

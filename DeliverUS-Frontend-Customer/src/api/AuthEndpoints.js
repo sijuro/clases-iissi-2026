@@ -1,11 +1,11 @@
 import { post, put } from './helpers/ApiRequestsHelper'
 
 function login(data) {
-  return post('users/loginRider', data)
+  return post('users/login', data)
 }
 
 function register(data) {
-  return post('users/registerRider', data)
+  return post('users/register', data)
 }
 
 function update(data) {

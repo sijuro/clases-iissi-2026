@@ -6,8 +6,10 @@ import TextRegular from '../../components/TextRegular'
 export default function MyOrdersScreen() {
   return (
     <View style={styles.container}>
-      <TextSemiBold textStyle={styles.title}>Mis pedidos</TextSemiBold>
-      <TextRegular textStyle={styles.subtitle}>Aquí se mostrarán los pedidos que estás gestionando.</TextRegular>
+      <TextSemiBold textStyle={styles.title}>My orders</TextSemiBold>
+      <TextRegular textStyle={styles.subtitle}>
+        The orders you place will be shown here.
+      </TextRegular>
     </View>
   )
 }

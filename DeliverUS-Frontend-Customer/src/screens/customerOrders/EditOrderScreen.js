@@ -17,14 +17,14 @@ import defaultProductImage from '../../../assets/product.jpeg'
 import restaurantLogo from '../../../assets/restaurantLogo.jpeg'
 import { API_BASE_URL } from '@env'
 
-const getElapsedMinutes = (dateString) => {
+const getElapsedMinutes = dateString => {
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now - date
   return Math.floor(diffMs / 60000)
 }
 
-export default function OrderDetailScreen({ navigation, route }) {
+export default function EditOrderScreen({ navigation, route }) {
   const [order, setOrder] = useState({})
 
   useEffect(() => {
@@ -62,7 +62,8 @@ export default function OrderDetailScreen({ navigation, route }) {
               {order.restaurant.name}
             </TextSemiBold>
             <TextRegular textStyle={styles.description}>
-              <MaterialCommunityIcons name="store" size={14} color={'white'} /> {order.restaurant.address}, {order.restaurant.postalCode}
+              <MaterialCommunityIcons name="store" size={14} color={'white'} />{' '}
+              {order.restaurant.address}, {order.restaurant.postalCode}
             </TextRegular>
           </View>
         </ImageBackground>
@@ -72,13 +73,28 @@ export default function OrderDetailScreen({ navigation, route }) {
             Order #{order.id}
           </TextSemiBold>
           <TextRegular textStyle={styles.orderInfoText}>
-            <MaterialCommunityIcons name="map-marker" size={14} color={GlobalStyles.brandPrimary} /> Deliver to: {order.user.firstName} - {order.address}
+            <MaterialCommunityIcons
+              name="map-marker"
+              size={14}
+              color={GlobalStyles.brandPrimary}
+            />{' '}
+            Delivery address: {order.address}
           </TextRegular>
           <TextRegular textStyle={styles.orderInfoText}>
-            <MaterialCommunityIcons name="cash" size={14} color={GlobalStyles.brandPrimary} /> Total: {order.price.toFixed(2)}€
+            <MaterialCommunityIcons
+              name="cash"
+              size={14}
+              color={GlobalStyles.brandPrimary}
+            />{' '}
+            Total: {order.price.toFixed(2)}€
           </TextRegular>
           <TextRegular textStyle={styles.orderInfoText}>
-            <MaterialCommunityIcons name="clock-outline" size={14} color={GlobalStyles.brandPrimary} /> Ordered {getElapsedMinutes(order.createdAt)} min ago
+            <MaterialCommunityIcons
+              name="clock-outline"
+              size={14}
+              color={GlobalStyles.brandPrimary}
+            />{' '}
+            Ordered {getElapsedMinutes(order.createdAt)} min ago
           </TextRegular>
         </View>
       </View>
@@ -99,9 +115,7 @@ export default function OrderDetailScreen({ navigation, route }) {
         <TextSemiBold textStyle={styles.price}>
           {item.price.toFixed(2)}€
         </TextSemiBold>
-        <TextRegular>
-          Quantity: {item.OrderProducts.quantity}
-        </TextRegular>
+        <TextRegular>Quantity: {item.OrderProducts.quantity}</TextRegular>
       </ImageCard>
     )
   }

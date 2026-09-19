@@ -30,7 +30,7 @@ export default function LoginScreen({ navigation }) {
     signIn(
       values,
       loggedInUser => {
-        if (loggedInUser.userType === 'rider') {
+        if (loggedInUser.userType === 'customer') {
           showMessage({
             message: `Welcome back ${loggedInUser.firstName}.`,
             type: 'success',
@@ -39,7 +39,7 @@ export default function LoginScreen({ navigation }) {
           })
         } else {
           showMessage({
-            message: `Welcome back ${loggedInUser.firstName}. You are not a rider.`,
+            message: `Welcome back ${loggedInUser.firstName}. You are not a customer.`,
             type: 'warning',
             style: GlobalStyles.flashStyle,
             titleStyle: GlobalStyles.flashTextStyle
@@ -55,7 +55,7 @@ export default function LoginScreen({ navigation }) {
   return (
     <Formik
       validationSchema={validationSchema}
-      initialValues={{ email: 'rider1@rider.com', password: 'secret' }}
+      initialValues={{ email: 'customer1@customer.com', password: 'secret' }}
       onSubmit={login}
     >
       {({ handleSubmit }) => (
@@ -65,7 +65,7 @@ export default function LoginScreen({ navigation }) {
             <InputItem
               name="email"
               label="email:"
-              placeholder="rider1@rider.com"
+              placeholder="customer1@customer.com"
               textContentType="emailAddress"
             />
             <InputItem

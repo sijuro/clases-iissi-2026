@@ -30,12 +30,6 @@ const loadFileRoutes = function (app) {
       UserValidation.create,
       handleValidation,
       UserController.registerOwner)
-  app.route('/users/registerRider')
-    .post(
-      handleFilesUpload(['avatar'], process.env.AVATARS_FOLDER),
-      UserValidation.create,
-      handleValidation,
-      UserController.registerRider)
   app.route('/users/login')
     .post(
       UserValidation.login,
@@ -46,11 +40,6 @@ const loadFileRoutes = function (app) {
       UserValidation.login,
       handleValidation,
       UserController.loginOwner)
-  app.route('/users/loginRider')
-    .post(
-      UserValidation.login,
-      handleValidation,
-      UserController.loginRider)
   app.route('/users/isTokenValid')
     .put(UserController.isTokenValid)
   app.route('/users/myRestaurants')
