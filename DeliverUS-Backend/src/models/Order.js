@@ -15,6 +15,7 @@ const loadModel = (sequelize, DataTypes) => {
       Order.belongsTo(models.Restaurant, { foreignKey: 'restaurantId', as: 'restaurant' })
       Order.belongsTo(models.User, { foreignKey: 'userId', as: 'user' })
       Order.belongsToMany(models.Product, { as: 'products', through: OrderProducts }, { onDelete: 'cascade' })
+      Order.belongsTo(models.Coupon, { foreignKey: 'couponId', as: 'coupon' })
     }
 
     getStatus () {
@@ -39,7 +40,10 @@ const loadModel = (sequelize, DataTypes) => {
       get () {
         return this.getStatus()
       }
-    }
+    },
+    couponId: DataTypes.INTEGER,
+    couponDiscount: DataTypes.FLOAT,
+    customerComments: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'Order'

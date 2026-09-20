@@ -56,8 +56,25 @@ module.exports = {
         allowNull: false,
         type: Sequelize.DATE,
         defaultValue: new Date()
-      }
-
+      },
+      couponId: {
+        allowNull: true,
+        type: Sequelize.INTEGER,
+        references: {
+          model: {
+            tableName: 'Coupon'
+          },
+          key: 'id'
+        }
+      },
+      couponDiscount: {
+        allowNull: true,
+        type: Sequelize.FLOAT,
+      },
+      couponDiscount: {
+        allowNull: true,
+        type: Sequelize.STRING,
+      },
     })
     await queryInterface.createTable('OrderProducts', {
       orderId: {
