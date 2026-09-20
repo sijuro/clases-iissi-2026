@@ -37,6 +37,34 @@ const loadFileRoutes = function (app) {
       checkEntityExists(Order, 'orderId'),
       OrderMiddleware.checkOrderVisible,
       OrderController.show)
+
+  app.route('/orders/:orderId/applyCoupon')
+    .get(
+      isLoggedIn,
+      hasRole('customer'),
+      checkEntityExists(Order, 'orderId'),
+      OrderMiddleware.checkOrderBelongsToCustomer, // TODO
+      OrderValidation.applyCoupon, // TODO
+      OrderMiddleware.checkOrderCanBeCouponApplied, // TODO
+      OrderController.applyCoupon, // TODO
+    )
+
+  app.route('/orders/:orderId/removeCoupon')
+    .get(
+      isLoggedIn,
+      hasRole('customer'),
+      checkEntityExists(Order, 'orderId'),
+      OrderMiddleware.checkOrderBelongsToCustomer, // TODO
+      OrderMiddleware.checkOrderCanRemoveCoupon, // TODO
+      OrderController.removeCoupon, // TODO
+    )
+
+    app.route('/orders/customer')
+      .get(
+        isLoggedIn,
+        hasRole('customer'),
+        OrderController.OrderList // TODO
+      )
 }
 
 export default loadFileRoutes
