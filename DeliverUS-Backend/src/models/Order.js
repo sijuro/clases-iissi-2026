@@ -43,7 +43,7 @@ const loadModel = (sequelize, DataTypes) => {
     },
     couponId: DataTypes.INTEGER,
     couponDiscount: DataTypes.FLOAT,
-    customerComments: DataTypes.STRING
+    customerComments: DataTypes.STRING(500)
   }, {
     sequelize,
     modelName: 'Order'

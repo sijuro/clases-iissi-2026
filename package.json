@@ -12,5 +12,8 @@
     "start:frontend:customer": "cd DeliverUS-Frontend-Customer && npx expo start",
     "install:all:win": "npm run copy:env:win && npm run install:backend && npm run migrate:backend && npm run install:frontend:owner && npm run install:frontend:customer",
     "install:all:bash": "npm run copy:env:bash && npm run install:backend && npm run migrate:backend && npm run install:frontend:owner && npm run install:frontend:customer"
+  },
+  "dependencies": {
+    "expo": "^57.0.26"
   }
 }

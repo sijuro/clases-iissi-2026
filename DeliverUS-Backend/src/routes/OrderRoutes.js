@@ -1,6 +1,8 @@
 import OrderController from '../controllers/OrderController.js'
+import * as OrderValidation from '../controllers/validation/OrderValidation.js'
 import { hasRole, isLoggedIn } from '../middlewares/AuthMiddleware.js'
 import { checkEntityExists } from '../middlewares/EntityMiddleware.js'
+import { handleValidation } from '../middlewares/ValidationHandlingMiddleware.js'
 import * as OrderMiddleware from '../middlewares/OrderMiddleware.js'
 import { Order } from '../models/models.js'
 
@@ -31,51 +33,49 @@ const loadFileRoutes = function (app) {
       OrderMiddleware.checkOrderCanBeDelivered,
       OrderController.deliver)
 
+  // NOTE: /orders/customer must be registered before /orders/:orderId
+  app.route('/orders/customer')
+    .get(
+      isLoggedIn,
+      hasRole('customer'),
+      OrderController.indexCustomer)
+
+  app.route('/orders/:orderId/applyCoupon')
+    .patch(
+      isLoggedIn,
+      hasRole('customer'),
+      checkEntityExists(Order, 'orderId'),
+      OrderMiddleware.checkOrderBelongsToCustomer,
+      OrderValidation.applyCoupon,
+      handleValidation,
+      OrderMiddleware.checkOrderCanBeCouponApplied,
+      OrderController.applyCoupon)
+
+  app.route('/orders/:orderId/removeCoupon')
+    .patch(
+      isLoggedIn,
+      hasRole('customer'),
+      checkEntityExists(Order, 'orderId'),
+      OrderMiddleware.checkOrderBelongsToCustomer,
+      OrderMiddleware.checkOrderCanRemoveCoupon,
+      OrderController.removeCoupon)
+
+  app.route('/orders/:orderId/customerComments')
+    .patch(
+      isLoggedIn,
+      hasRole('customer'),
+      checkEntityExists(Order, 'orderId'),
+      OrderMiddleware.checkOrderBelongsToCustomer,
+      OrderValidation.updateCustomerComments,
+      handleValidation,
+      OrderController.updateCustomerComments)
+
   app.route('/orders/:orderId')
     .get(
       isLoggedIn,
       checkEntityExists(Order, 'orderId'),
       OrderMiddleware.checkOrderVisible,
       OrderController.show)
-
-  app.route('/orders/:orderId/applyCoupon')
-    .get(
-      isLoggedIn,
-      hasRole('customer'),
-      checkEntityExists(Order, 'orderId'),
-      OrderMiddleware.checkOrderBelongsToCustomer,
-      OrderValidation.applyCoupon, // TODO
-      handleValidation,
-      OrderMiddleware.checkOrderCanBeCouponApplied, // TODO
-      OrderController.applyCoupon, // TODO
-    )
-
-  app.route('/orders/:orderId/removeCoupon')
-    .get(
-      isLoggedIn,
-      hasRole('customer'),
-      checkEntityExists(Order, 'orderId'),
-      OrderMiddleware.checkOrderBelongsToCustomer,
-      OrderMiddleware.checkOrderCanRemoveCoupon, // TODO
-      OrderController.removeCoupon, // TODO
-    )
-
-  app.route('/orders/customer')
-    .get(
-      isLoggedIn,
-      hasRole('customer'),
-      OrderController.OrderList // TODO
-    )
-
-  app.route('/orders/:orderId/customerComments')
-    .get(
-      isLoggedIn,
-      hasRole('customer'),
-      checkEntityExists(Order, 'orderId'),
-      OrderMiddleware.checkOrderBelongsToCustomer,
-      OrderValidation.updateCustomerComment,
-      handleValidation,
-    )
 }
 
 export default loadFileRoutes

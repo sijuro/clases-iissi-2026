@@ -6,9 +6,13 @@ import {
   ImageBackground,
   Image
 } from 'react-native'
+
+import { Formik } from 'formik'
+import * as yup from 'yup'
+
 import { showMessage } from 'react-native-flash-message'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { getOrderDetail } from '../../api/OrderEndpoints'
+import { getOrderDetail, applyCoupon, updateCustomerComments } from '../../api/OrderEndpoints'
 import ImageCard from '../../components/ImageCard'
 import TextRegular from '../../components/TextRegular'
 import TextSemiBold from '../../components/TextSemiBold'
@@ -16,6 +20,7 @@ import * as GlobalStyles from '../../styles/GlobalStyles'
 import defaultProductImage from '../../../assets/product.jpeg'
 import restaurantLogo from '../../../assets/restaurantLogo.jpeg'
 import { API_BASE_URL } from '@env'
+
 
 const getElapsedMinutes = dateString => {
   const date = new Date(dateString)
@@ -142,6 +147,44 @@ export default function EditOrderScreen({ navigation, route }) {
     }
   }
 
+  const handleApplyCoupon = async values => {
+    try {
+      await applyCoupon(order.id, values.code)
+      showMessage({
+        message: `Coupon applied correctly`
+      })
+      await fetchOrderDetail()
+    } catch (error) {
+      showMessage({
+        message: `There was an error applying the coupon ${error}`,
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
+  }
+
+  const renderCouponSection = () => {
+    if (order.couponId) {
+      // Mostrar el cupon
+      return (
+        <View style={styles.cuponApplied}>
+            <MaterialCommunityIcons
+              name="tag"
+              size={14}
+              color={GlobalStyles.brandSuccess}
+            />{' '}
+            Discount: {order.couponDiscount.toFixed(2)}€
+        </View>
+      )
+    } else {
+      // Mostrar el formulario
+      return <Formik>
+
+      </Formik>
+    }
+  }
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -206,5 +249,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     marginVertical: 2
+  },
+  cuponApplied: {
+    // TODO
   }
 })

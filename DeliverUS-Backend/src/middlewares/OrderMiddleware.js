@@ -87,11 +87,11 @@ const checkOrderCanBeDelivered = async (req, res, next) => {
 
 const checkOrderBelongsToCustomer = async (req, res, next) => {
   try {
-    const order =  await Order.findByPk(req.params.orderId)
+    const order = await Order.findByPk(req.params.orderId)
     if (order.userId === req.user.id) {
       return next()
     } else {
-       return res.status(403).send('The order doesnt belong to you')
+      return res.status(403).send('The order doesnt belong to you')
     }
   } catch (err) {
     return res.status(500).send(err.message)
@@ -100,15 +100,15 @@ const checkOrderBelongsToCustomer = async (req, res, next) => {
 
 const checkOrderCanBeCouponApplied = async (req, res, next) => {
   try {
-    const order =  await Order.findByPk(req.params.orderId)
+    const order = await Order.findByPk(req.params.orderId)
 
     // EL codigo no es nulo ni esta vacio
-    if (req.body.code === null || req.body.code == ''){
+    if (req.body.code === null || req.body.code === '') {
       return res.status(422).send('Coupon unprocessable')
     }
 
     // El cupon existe
-    const coupon = await Coupon.findOne({ where:  { code: req.body.code }})
+    const coupon = await Coupon.findOne({ where: { code: req.body.code } })
     if (!coupon) {
       return res.status(404).send('Coupon not found')
     }
@@ -139,14 +139,15 @@ const checkOrderCanBeCouponApplied = async (req, res, next) => {
       return res.status(409).send('Coupon max used reached')
     }
 
+    return next()
   } catch (err) {
     return res.status(500).send(err.message)
   }
 }
 
-const checkOrderCanRemoveCoupon  = async (req, res, next) => {
+const checkOrderCanRemoveCoupon = async (req, res, next) => {
   try {
-    const order =  await Order.findByPk(req.params.orderId)
+    const order = await Order.findByPk(req.params.orderId)
     if (order.startedAt) {
       return res.status(409).send('Order is not pending')
     }
@@ -154,12 +155,14 @@ const checkOrderCanRemoveCoupon  = async (req, res, next) => {
     if (!order.couponId) {
       return res.status(409).send('Order already doesnt have a coupon')
     }
-  
+
+    return next()
   } catch (err) {
     return res.status(500).send(err.message)
   }
 }
 
-export { checkOrderOwnership, checkOrderCustomer, checkOrderVisible, checkOrderIsPending, checkOrderCanBeSent, checkOrderCanBeDelivered, checkRestaurantExists ,
+export {
+  checkOrderOwnership, checkOrderCustomer, checkOrderVisible, checkOrderIsPending, checkOrderCanBeSent, checkOrderCanBeDelivered, checkRestaurantExists,
   checkOrderBelongsToCustomer, checkOrderCanBeCouponApplied, checkOrderCanRemoveCoupon
 }

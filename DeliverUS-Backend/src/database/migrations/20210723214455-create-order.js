@@ -62,19 +62,19 @@ module.exports = {
         type: Sequelize.INTEGER,
         references: {
           model: {
-            tableName: 'Coupon'
+            tableName: 'Coupons'
           },
           key: 'id'
         }
       },
       couponDiscount: {
         allowNull: true,
-        type: Sequelize.FLOAT,
+        type: Sequelize.FLOAT
       },
-      couponDiscount: {
+      customerComments: {
         allowNull: true,
-        type: Sequelize.STRING,
-      },
+        type: Sequelize.STRING(500)
+      }
     })
     await queryInterface.createTable('OrderProducts', {
       orderId: {
