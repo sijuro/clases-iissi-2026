@@ -179,7 +179,10 @@ export default function EditOrderScreen({ navigation, route }) {
       )
     } else {
       // Mostrar el formulario
-      return <Formik>
+      return <Formik 
+        validationSchema={validationSchema}
+        initialValues={{ email: '', password: '' }}
+        onSubmit={login}>
 
       </Formik>
     }
