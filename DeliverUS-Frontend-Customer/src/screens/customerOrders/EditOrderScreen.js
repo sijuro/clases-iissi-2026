@@ -4,12 +4,13 @@ import {
   View,
   FlatList,
   ImageBackground,
-  Image
+  Image,
+  Pressable
 } from 'react-native'
 
 import { Formik } from 'formik'
 import * as yup from 'yup'
-
+import InputItem from '../../components/InputItem'
 import { showMessage } from 'react-native-flash-message'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { getOrderDetail, applyCoupon, updateCustomerComments } from '../../api/OrderEndpoints'
@@ -29,8 +30,18 @@ const getElapsedMinutes = dateString => {
   return Math.floor(diffMs / 60000)
 }
 
+const couponValidationSchema = yup.object().shape({
+  code: yup.string().required('Code required')
+})
+
+const commentValidationSchema = yup.object().shape({
+  comments: yup.string().max(500, 'Comment too long')
+})
+
 export default function EditOrderScreen({ navigation, route }) {
   const [order, setOrder] = useState({})
+  const [couponErrors, setCouponErrors] = useState(null)
+  const [commentError, setCommentError] = useState(null)
 
   useEffect(() => {
     fetchOrderDetail()
@@ -102,6 +113,8 @@ export default function EditOrderScreen({ navigation, route }) {
             Ordered {getElapsedMinutes(order.createdAt)} min ago
           </TextRegular>
         </View>
+        {renderCouponSection()}
+        {renderCommentSection()}
       </View>
     )
   }
@@ -164,6 +177,23 @@ export default function EditOrderScreen({ navigation, route }) {
     }
   }
 
+  const handleSaveComment = async values => {
+    try {
+      await updateCustomerComments(order.id, values.comments)
+      showMessage({
+        message: `Comment updated correctly`
+      })
+      navigation.navigate('MyOrdersScreen', { dirty: true })
+    } catch (error) {
+      showMessage({
+        message: `There was an error saving the comment ${error}`,
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
+  }
+
   const renderCouponSection = () => {
     if (order.couponId) {
       // Mostrar el cupon
@@ -180,12 +210,81 @@ export default function EditOrderScreen({ navigation, route }) {
     } else {
       // Mostrar el formulario
       return <Formik 
-        validationSchema={validationSchema}
-        initialValues={{ email: '', password: '' }}
-        onSubmit={login}>
+        validationSchema={couponValidationSchema}
+        initialValues={{ code: '' }}
+        onSubmit={handleApplyCoupon}>
+        
+        {({ handleSubmit }) => (
+          <View style={styles.container}>
+            <TextSemiBold>Apply a coupon</TextSemiBold>
+            <InputItem
+              name="code"
+              label="Coupon code:"
+            />
+          {couponErrors &&
+            couponErrors.map((error, index) => (
+              <TextError key={index}>
+                {error.param}-{error.msg}
+              </TextError>
+            ))}
+
+            <Pressable
+              onPress={handleSubmit}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: pressed
+                    ? GlobalStyles.brandSuccessTap
+                    : GlobalStyles.brandSuccess
+                },
+                styles.button
+              ]}
+            >
+              <TextRegular textStyle={styles.text}>Apply coupon</TextRegular>
+            </Pressable>
+          </View>
+        )}
+
 
       </Formik>
     }
+  }
+
+  const renderCommentSection = () => {
+    return (
+      <Formik
+        validationSchema={commentValidationSchema}
+        initialValues={{ comments: order.updateCustomerComments || '' }}
+        onSubmit={handleSaveComment}>
+        {({ handleSubmit }) => (
+          <View style={styles.container}>
+            <TextSemiBold>Comments</TextSemiBold>
+            <InputItem 
+              name="comments"
+              label="Comments:"
+            />
+          {commentError &&
+            commentError.map((error, index) => (
+              <TextError key={index}>
+                {error.param}-{error.msg}
+              </TextError>
+            ))}           
+            <Pressable
+              onPress={handleSubmit}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: pressed
+                    ? GlobalStyles.brandSuccessTap
+                    : GlobalStyles.brandSuccess
+                },
+                styles.button
+              ]}
+            >
+              <TextRegular textStyle={styles.text}>Save comment</TextRegular>
+            </Pressable>
+          </View>
+        )}
+      </Formik>
+    )
   }
 
   return (
