@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 #
-# iniciar.sh - Prepara y arranca DeliverUS de un tiron.
+# iniciar.sh - Prepara y arranca DeliverUS (examen de Resenas) de un tiron.
 #
 # Uso: ./iniciar.sh [opciones]
 #   (sin opciones)   Prepara el entorno y arranca backend + app Customer
 #   --all            Arranca tambien la app Owner
 #   --backend-only   Solo prepara el entorno y arranca el backend
 #   --setup-only     Prepara el entorno (deps, .env, BD, migraciones) y sale
+#   --test           Prepara el entorno, ejecuta los tests e2e del backend y sale
 #   --no-install     No instala dependencias; falla si faltan
 #   --stop           Para el contenedor de base de datos y sale
 #   -h, --help       Muestra esta ayuda
@@ -28,6 +29,7 @@ DB_ROOT_PASSWORD="root"
 START_OWNER=0
 START_CUSTOMER=1
 SETUP_ONLY=0
+RUN_TESTS=0
 NO_INSTALL=0
 STOP=0
 
@@ -44,7 +46,7 @@ warn() { printf '%s!!%s %s\n' "$C_YELLOW" "$C_RESET" "$*" >&2; }
 die()  { printf '%sXX%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; exit 1; }
 
 usage() {
-  sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 have() { command -v "$1" >/dev/null 2>&1; }
@@ -77,6 +79,7 @@ while [[ $# -gt 0 ]]; do
     --all)          START_OWNER=1 ;;
     --backend-only) START_CUSTOMER=0; START_OWNER=0 ;;
     --setup-only)   SETUP_ONLY=1 ;;
+    --test)         RUN_TESTS=1; START_CUSTOMER=0; START_OWNER=0 ;;
     --no-install)   NO_INSTALL=1 ;;
     --stop)         STOP=1 ;;
     -h|--help)      usage; exit 0 ;;
@@ -128,19 +131,18 @@ ensure_db() {
   DB_PASS="$(get_env DATABASE_PASSWORD "$env_file")"
   DB_NAME="$(get_env DATABASE_NAME "$env_file")"; DB_NAME="${DB_NAME:-deliverus}"
 
-  if port_open "$DB_PORT"; then
-    ok "Base de datos ya accesible en ${DB_HOST}:${DB_PORT} (se omite Docker)"
-    return 0
-  fi
-
-  have docker || die "No hay BD en el puerto $DB_PORT y Docker no esta instalado."
-
   local state="missing"
-  if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+  if have docker && docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
     state="$(docker inspect -f '{{.State.Status}}' "$CONTAINER_NAME" 2>/dev/null || echo unknown)"
   fi
 
+  # Si no gestionamos ningun contenedor y ya hay una BD accesible, se usa esa.
   if [[ "$state" == "missing" ]]; then
+    if port_open "$DB_PORT"; then
+      ok "Base de datos ya accesible en ${DB_HOST}:${DB_PORT} (se omite Docker)"
+      return 0
+    fi
+    have docker || die "No hay BD en el puerto $DB_PORT y Docker no esta instalado."
     info "Creando contenedor MariaDB $CONTAINER_NAME..."
     timeout 180 docker run -d --name "$CONTAINER_NAME" \
       -e MARIADB_ROOT_PASSWORD="$DB_ROOT_PASSWORD" \
@@ -149,23 +151,30 @@ ensure_db() {
       -e MARIADB_PASSWORD="$DB_PASS" \
       -p "${DB_PORT}:3306" \
       "$DB_IMAGE" >/dev/null
-  elif [[ "$state" != "running" ]]; then
-    info "Arrancando contenedor existente $CONTAINER_NAME (estado: $state)..."
-    timeout 60 docker start "$CONTAINER_NAME" >/dev/null
   else
-    info "Contenedor $CONTAINER_NAME ya en ejecucion"
+    have docker || die "Existe el contenedor $CONTAINER_NAME pero Docker no esta disponible."
+    if [[ "$state" != "running" ]]; then
+      info "Arrancando contenedor existente $CONTAINER_NAME (estado: $state)..."
+      timeout 60 docker start "$CONTAINER_NAME" >/dev/null
+    else
+      info "Contenedor $CONTAINER_NAME ya en ejecucion"
+    fi
   fi
 
-  info "Esperando a que MariaDB acepte conexiones (la primera vez tarda ~1 min)..."
+  # Esperamos a que la BD responda por TCP y autentique de verdad. La imagen de
+  # MariaDB arranca primero un servidor temporal de inicializacion (solo socket)
+  # y despues el definitivo; comprobar por socket daria un falso positivo y las
+  # migraciones fallarian con "socket has unexpectedly been closed".
+  info "Esperando a que MariaDB acepte conexiones TCP (la primera vez puede tardar varios minutos)..."
   local i
-  for i in $(seq 1 120); do
+  for i in $(seq 1 900); do
     if timeout 10 docker exec "$CONTAINER_NAME" \
-        mariadb -uroot -p"$DB_ROOT_PASSWORD" -e 'SELECT 1' >/dev/null 2>&1; then
+        mariadb -h127.0.0.1 -uroot -p"$DB_ROOT_PASSWORD" -e 'SELECT 1' >/dev/null 2>&1; then
       ok "MariaDB lista en ${DB_HOST}:${DB_PORT}"
       return 0
     fi
-    if (( i % 5 == 0 )); then
-      printf '   ...esperando %ss\n' "$i"
+    if (( i % 10 == 0 )); then
+      printf '   ...esperando %ss (puede tardar; la primera vez inicializa la BD)\n' "$i"
     fi
     sleep 1
   done
@@ -174,9 +183,18 @@ ensure_db() {
 }
 
 run_migrations() {
-  info "Ejecutando migraciones y seeders..."
-  ( cd "$ROOT_DIR" && npm run migrate:backend )
-  ok "Base de datos preparada"
+  local attempt=1 max=3
+  while (( attempt <= max )); do
+    info "Ejecutando migraciones y seeders (intento $attempt/$max)..."
+    if ( cd "$ROOT_DIR" && npm run migrate:backend ); then
+      ok "Base de datos preparada"
+      return 0
+    fi
+    warn "Las migraciones fallaron; reintentando en 5s..."
+    sleep 5
+    attempt=$(( attempt + 1 ))
+  done
+  die "No se pudieron ejecutar las migraciones tras $max intentos."
 }
 
 start_backend() {
@@ -220,6 +238,13 @@ fi
 ensure_db
 run_migrations
 
+if [[ "$RUN_TESTS" == "1" ]]; then
+  info "Ejecutando los tests e2e del backend (reviews.test.js)..."
+  ( cd "$ROOT_DIR" && npm run test:backend )
+  ok "Tests finalizados"
+  exit 0
+fi
+
 if [[ "$SETUP_ONLY" == "1" ]]; then
   ok "Entorno preparado. Usa ./iniciar.sh para arrancar los servicios."
   exit 0
@@ -235,6 +260,7 @@ fi
 
 if [[ "$START_CUSTOMER" == "1" ]]; then
   info "Arrancando app Customer (Expo)..."
-  printf '\nUsuario de pruebas: customer1@customer.com / secret\n\n'
+  printf '\nUsuario de pruebas: customer1@customer.com / secret\n'
+  printf 'Revisa la pestana "My reviews" para ver las resenas sembradas.\n\n'
   ( cd "$CUSTOMER_DIR" && npm start )
 fi

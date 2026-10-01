@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useContext, useEffect } from 'react'
 import * as GlobalStyles from '../styles/GlobalStyles'
-import AvailableCouponsStack from './availableCoupons/AvailableCouponsStack'
+import MyReviewsStack from './reviews/MyReviewsStack'
 import CustomerOrdersStack from './customerOrders/CustomerOrdersStack'
 import ProfileStack from './profile/ProfileStack'
 
@@ -76,8 +76,8 @@ export default function Layout() {
             screenOptions={({ route }) => ({
               tabBarIcon: ({ color, size }) => {
                 let iconName
-                if (route.name === 'Available coupons') {
-                  iconName = 'ticket-percent-outline'
+                if (route.name === 'My reviews') {
+                  iconName = 'star-outline'
                 } else if (route.name === 'My orders') {
                   iconName = 'receipt-text-outline'
                 } else if (route.name === 'Profile') {
@@ -94,10 +94,7 @@ export default function Layout() {
               headerShown: false
             })}
           >
-            <Tab.Screen
-              name="Available coupons"
-              component={AvailableCouponsStack}
-            />
+            <Tab.Screen name="My reviews" component={MyReviewsStack} />
             <Tab.Screen name="My orders" component={CustomerOrdersStack} />
             <Tab.Screen name="Profile" component={ProfileStack} />
           </Tab.Navigator>

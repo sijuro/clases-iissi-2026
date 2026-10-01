@@ -1,42 +1,49 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('Coupons', {
+    await queryInterface.createTable('Reviews', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      code: {
-        allowNull: false,
-        type: Sequelize.STRING,
-        unique: true
-      },
-      description: {
-        type: Sequelize.STRING
-      },
-      discountPercentage: {
+      rating: {
         allowNull: false,
         type: Sequelize.INTEGER
       },
-      minPrice: {
-        allowNull: false,
-        type: Sequelize.DOUBLE,
-        defaultValue: 0
+      comment: {
+        type: Sequelize.STRING(500)
       },
-      expiresAt: {
+      orderId: {
         allowNull: false,
-        type: Sequelize.DATE
+        unique: true,
+        type: Sequelize.INTEGER,
+        references: {
+          model: {
+            tableName: 'Orders'
+          },
+          key: 'id'
+        }
       },
-      maxUses: {
+      restaurantId: {
         allowNull: false,
         type: Sequelize.INTEGER,
-        defaultValue: 1
+        references: {
+          model: {
+            tableName: 'Restaurants'
+          },
+          key: 'id'
+        }
       },
-      usedCount: {
+      userId: {
         allowNull: false,
         type: Sequelize.INTEGER,
-        defaultValue: 0
+        references: {
+          model: {
+            tableName: 'Users'
+          },
+          key: 'id'
+        }
       },
       createdAt: {
         allowNull: false,
@@ -51,6 +58,6 @@ module.exports = {
     })
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('Coupons')
+    await queryInterface.dropTable('Reviews')
   }
 }

@@ -14,9 +14,9 @@ module.exports = {
         // Casa felix id=1
         // Customer1 id=1
         // pending
-        { createdAt: new Date(Date.now() - 900000), startedAt: new Date(Date.now() - 400000), price: 15.0, address: 'Fake street 123', shippingCosts: 0, restaurantId: 1, userId: 1 },
+        { createdAt: new Date(Date.now() - 900000), startedAt: new Date(Date.now() - 400000), sentAt: new Date(Date.now() - 300000), deliveredAt: new Date(Date.now() - 200000), price: 15.0, address: 'Fake street 123', shippingCosts: 0, restaurantId: 1, userId: 1 },
 
-        { createdAt: new Date(Date.now() - 400000), startedAt: new Date(Date.now() - 100000), price: 19.5, address: 'Reina Mercedes s/n', shippingCosts: 0, restaurantId: 1, userId: 1 },
+        { createdAt: new Date(Date.now() - 400000), startedAt: new Date(Date.now() - 100000), sentAt: new Date(Date.now() - 90000), deliveredAt: new Date(Date.now() - 80000), price: 19.5, address: 'Reina Mercedes s/n', shippingCosts: 0, restaurantId: 1, userId: 1 },
 
         { createdAt: new Date(Date.now() - 200000), price: 12.50, address: 'Real street 456', shippingCosts: 0, restaurantId: 1, userId: 1 },
 
@@ -24,7 +24,7 @@ module.exports = {
 
         /// 100 montaditos id=2
         // Customer1 id=1
-        { createdAt: new Date(Date.now() - 300000), startedAt: new Date(), price: 6, address: 'My street 123', shippingCosts: 1.5, restaurantId: 2, userId: 1 },
+        { createdAt: new Date(Date.now() - 300000), startedAt: new Date(Date.now() - 250000), sentAt: new Date(Date.now() - 200000), deliveredAt: new Date(Date.now() - 150000), price: 6, address: 'My street 123', shippingCosts: 1.5, restaurantId: 2, userId: 1 },
         { createdAt: new Date(Date.now() - 200000), price: 10.5, address: 'Another street 456', shippingCosts: 1.5, restaurantId: 2, userId: 1 }
 
       ], {})

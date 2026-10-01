@@ -1,17 +1,17 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import React from 'react'
-import AvailableCouponsScreen from './AvailableCouponsScreen'
+import MyReviewsScreen from './MyReviewsScreen'
 
 const Stack = createNativeStackNavigator()
 
-export default function AvailableCouponsStack() {
+export default function MyReviewsStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen
-        name="AvailableCouponsScreen"
-        component={AvailableCouponsScreen}
+        name="MyReviewsScreen"
+        component={MyReviewsScreen}
         options={{
-          title: 'Available Coupons'
+          title: 'My Reviews'
         }}
       />
     </Stack.Navigator>

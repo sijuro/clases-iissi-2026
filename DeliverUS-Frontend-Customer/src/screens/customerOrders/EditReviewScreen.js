@@ -24,7 +24,7 @@ const getElapsedMinutes = dateString => {
   return Math.floor(diffMs / 60000)
 }
 
-export default function EditOrderScreen({ navigation, route }) {
+export default function EditReviewScreen({ navigation, route }) {
   const [order, setOrder] = useState({})
 
   useEffect(() => {

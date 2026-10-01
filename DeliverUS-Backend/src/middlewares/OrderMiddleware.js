@@ -85,4 +85,17 @@ const checkOrderCanBeDelivered = async (req, res, next) => {
   }
 }
 
-export { checkOrderOwnership, checkOrderCustomer, checkOrderVisible, checkOrderIsPending, checkOrderCanBeSent, checkOrderCanBeDelivered, checkRestaurantExists }
+const checkOrderBelongsToCustomer = async (req, res, next) => {
+  try {
+    const order = await Order.findByPk(req.params.orderId)
+    if (order.userId === req.user.id) {
+      return next()
+    } else {
+      return res.status(403).send('The order doesnt belong to you')
+    }
+  } catch (err) {
+    return res.status(500).send(err.message)
+  }
+}
+
+export { checkOrderOwnership, checkOrderCustomer, checkOrderVisible, checkOrderIsPending, checkOrderCanBeSent, checkOrderCanBeDelivered, checkRestaurantExists, checkOrderBelongsToCustomer }

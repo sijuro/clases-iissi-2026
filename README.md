@@ -1,109 +1,100 @@
-# Examen DeliverUS - Modelo Cupones - Gestión de Cupones por Clientes
+# Examen DeliverUS - Modelo Reseñas - Valoración de Pedidos por Clientes
 
 ## Enunciado del examen
 
-Hasta ahora DeliverUS contaba con dos tipos de usuario: **customer** (cliente, que realiza pedidos) y **owner** (propietario, que gestiona sus restaurantes y confirma/envía/entrega los pedidos). En esta convocatoria se incorpora a la aplicación de cliente (`DeliverUS-Frontend-Customer`) la **gestión de cupones de descuento**.
+Hasta ahora DeliverUS contaba con dos tipos de usuario: **customer** (cliente, que realiza pedidos) y **owner** (propietario, que gestiona sus restaurantes y confirma/envía/entrega los pedidos). En esta convocatoria se incorpora a la aplicación de cliente (`DeliverUS-Frontend-Customer`) la **gestión de reseñas y valoraciones**: una vez recibido un pedido, el cliente puede valorar el restaurante con una puntuación y un comentario.
 
-### ¿Qué es un cupón y qué puede hacer el customer?
+### ¿Qué es una reseña y qué puede hacer el customer?
 
-Un cupón es un código de descuento que el cliente puede aplicar a uno de sus pedidos **pendientes**. Cada cupón tiene un porcentaje de descuento, un importe mínimo de pedido, una fecha de caducidad y un número máximo de usos.
+Una reseña es la valoración que un cliente hace de un restaurante a partir de un pedido que ya ha recibido. Cada reseña tiene una **puntuación** (de 1 a 5 estrellas) y un **comentario** opcional. Una reseña siempre nace de un pedido entregado, por lo que queda ligada al pedido, al restaurante y al cliente que la escribió, y un mismo pedido solo puede valorarse una vez.
 
 De forma resumida, un customer puede:
 
 1. **Registrarse e identificarse** (`POST /users/register`, `POST /users/login`). *Esta parte ya está implementada.*
-2. **Consultar los cupones disponibles**: aquellos que no han caducado y a los que todavía les quedan usos. *Esta parte ya está implementada.*
-3. **Aplicar un cupón a uno de sus pedidos pendientes**: el pedido queda asociado al cupón y su precio se reduce con el descuento del cupón. A partir de ese momento el cupón deja de estar disponible para ese pedido.
-4. **Consultar sus pedidos**, para hacer seguimiento de los que aún no se han entregado y de los ya entregados, y ver el cupón aplicado a cada uno.
-5. **Quitar el cupón** de un pedido pendiente, restaurando su precio original y liberando el uso del cupón.
-6. **Añadir indicaciones de entrega**: una nota sobre cómo entregar el pedido (p. ej. "Dejar en la puerta, no contestan al timbre").
+2. **Consultar sus reseñas**, para repasar las valoraciones que ha escrito. *Esta parte ya está implementada.*
+3. **Consultar sus pedidos**, para localizar los que ya ha recibido y saber si ya los ha valorado.
+4. **Crear una reseña** sobre un pedido que ya ha sido entregado, indicando una puntuación de 1 a 5 y, opcionalmente, un comentario.
+5. **Editar una reseña** propia, corrigiendo la puntuación o el comentario.
+6. **Eliminar una reseña** propia, de forma que el pedido vuelve a quedar sin valorar.
 
-> ⚠️ **Un cupón solo puede aplicarse o quitarse mientras el pedido está pendiente** (es decir, antes de que el restaurante lo confirme). Los pedidos ya confirmados no pueden modificar su importe.
+> ⚠️ **Solo se puede reseñar un pedido entregado** (`deliveredAt` establecido) y **cada pedido admite una única reseña**. Una reseña solo puede editarse o eliminarse por el cliente que la escribió.
 
 ### Modelado conceptual
 
-Diagrama de clases de referencia de DeliverUS incluyendo la entidad `Coupon` y su relación con `Order` (a modelar por el alumnado).
+Diagrama de clases de referencia de DeliverUS incluyendo la entidad `Review` y sus relaciones con `Order`, `Restaurant` y `User` (a modelar por el alumnado).
 
-![Diagrama de clases de DeliverUS](images/CouponClassDiagram.svg)
+![Diagrama de clases de DeliverUS](images/ReviewClassDiagram.svg)
 
-### Modelo de datos del cupón
+### Modelo de datos de la reseña
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
 | `id` | INTEGER | Clave primaria. |
-| `code` | STRING | Código único del cupón (p. ej. `WELCOME10`). |
-| `description` | STRING | Descripción del cupón. |
-| `discountPercentage` | INTEGER | Porcentaje de descuento (1-100). |
-| `minPrice` | DOUBLE | Importe mínimo del pedido para poder aplicarlo. |
-| `expiresAt` | DATE | Fecha y hora de caducidad. |
-| `maxUses` | INTEGER | Número máximo de usos. |
-| `usedCount` | INTEGER | Número de usos ya realizados. |
+| `rating` | INTEGER | Puntuación de la reseña, de 1 a 5. |
+| `comment` | STRING | Comentario opcional (máximo 500 caracteres). |
+| `orderId` | INTEGER | Clave foránea al pedido valorado (única: un pedido, una reseña). |
+| `restaurantId` | INTEGER | Clave foránea al restaurante valorado (se deduce del pedido). |
+| `userId` | INTEGER | Clave foránea al customer autor de la reseña. |
+| `createdAt` | DATE | Fecha de creación de la reseña. |
+| `updatedAt` | DATE | Fecha de la última modificación de la reseña. |
 
-Cambios a realizar sobre el pedido (`Order`): `couponId` (clave foránea a `Coupon`), `couponDiscount` (importe descontado) y `customerComments` (texto con las indicaciones de entrega).
+### La reseña en el ciclo de vida del pedido
 
-### El cupón en el ciclo de vida del pedido
-
-El ciclo de vida del pedido sigue siendo `pending → confirmado (startedAt) → enviado (sentAt) → entregado (deliveredAt)`, gestionado por el owner mediante `confirm`/`send`/`deliver`. El cupón se aplica **solo** `pending` (sin `startedAt`) y, al aplicarlo, el nuevo precio del pedido se calcula como:
-
-```
-couponDiscount = round(price * discountPercentage / 100, 2)
-price = price - couponDiscount
-```
-
-Al quitar el cupón, el precio vuelve a su valor original (`price + couponDiscount`) y `couponId` y `couponDiscount` quedan a `null`.
+El ciclo de vida del pedido sigue siendo `pending → confirmado (startedAt) → enviado (sentAt) → entregado (deliveredAt)`, gestionado por el owner mediante `confirm`/`send`/`deliver`. La reseña se crea **solo** cuando el pedido está `entregado` (con `deliveredAt` establecido). Mientras un pedido no esté entregado no se puede reseñar, y si ya tiene una reseña no se puede crear otra.
 
 Es necesaria la implementación de los siguientes requisitos funcionales:
 
-> Las pruebas de aceptación de cada RF se dividen en **Backend** (que se ayudan a verificar con `coupons.test.js`, que no debe modificarse) y **Frontend** (comportamiento que debe observarse al usar la aplicación: navegación tras una acción y mensajes de éxito/error).
+> Las pruebas de aceptación de cada RF se dividen en **Backend** (que se ayudan a verificar con `reviews.test.js`, que no debe modificarse) y **Frontend** (comportamiento que debe observarse al usar la aplicación: navegación tras una acción y mensajes de éxito/error).
 
-### **RF1. Consultar cupones disponibles**. **YA IMPLEMENTADO**
+### **RF1. Consultar mis reseñas**. **YA IMPLEMENTADO**
 
 **Como** customer,
 
-**quiero** ver la lista de cupones vigentes a los que todavía les quedan usos
+**quiero** ver el listado de las reseñas que he escrito
 
-**para** poder elegir cuál aplicar a mi pedido.
+**para** repasar mis valoraciones.
 
-**Pruebas de aceptación — Backend** (`GET /coupons/available`):
+**Pruebas de aceptación — Backend** (`GET /reviews/customer`):
 
 - Sin sesión iniciada: `401 Unauthorized`.
 - Con sesión iniciada como `owner`: `403 Forbidden`.
-- Con sesión iniciada como `customer`: `200 OK` y un array de cupones.
-- Un cupón caducado (`expiresAt` en el pasado) no debe aparecer en el listado.
-- Un cupón sin usos disponibles (`usedCount` mayor o igual que `maxUses`) tampoco debe aparecer en el listado.
+- Con sesión iniciada como `customer`: `200 OK` y un array de reseñas.
+- El listado solo debe incluir reseñas cuyo `userId` sea el del customer autenticado (nunca reseñas de otros clientes).
+- Las reseñas deben listarse de la más reciente a la más antigua.
+- Cada reseña debe incluir los datos resumidos del restaurante (`id`, `name`, `logo`) y su `orderId`.
 
-**Pruebas de aceptación — Frontend** (`AvailableCouponsScreen.js`, ya implementada, para referencia):
+**Pruebas de aceptación — Frontend** (`MyReviewsScreen.js`, ya implementada, para referencia):
 
-- Al entrar en la pestaña "Available coupons" se carga el listado automáticamente.
+- Al entrar en la pestaña "My reviews" se carga el listado automáticamente.
 - Si la petición falla, se muestra un mensaje de error y se conserva el listado previo.
 
-### **RF2. Aplicar un cupón**
+### **RF2. Crear una reseña**
 
 **Como** customer,
 
-**quiero** aplicar un cupón a uno de mis pedidos pendientes
+**quiero** valorar con una puntuación y un comentario un pedido que ya he recibido
 
-**para** pagar menos por ese pedido.
+**para** dejar constancia de mi opinión sobre el restaurante.
 
-**Pruebas de aceptación — Backend** (`PATCH /orders/:orderId/applyCoupon`):
+**Pruebas de aceptación — Backend** (`POST /orders/:orderId/reviews`):
 
 - Sin sesión iniciada: `401 Unauthorized`.
 - Con sesión iniciada como `owner`: `403 Forbidden`.
 - Pedido que no pertenece al customer autenticado: `403 Forbidden`.
 - Pedido inexistente: `404 Not Found`.
-- `code` ausente o vacío en el cuerpo de la petición: `422 Unprocessable Entity`.
-- Cupón inexistente: `404 Not Found`.
-- Pedido que no está pendiente (ya tiene `startedAt`): `409 Conflict`.
-- Pedido que ya tiene un cupón aplicado: `409 Conflict`.
-- Pedido cuyo `price` es inferior al `minPrice` del cupón: `409 Conflict`.
-- Cupón caducado: `409 Conflict`.
-- Cupón sin usos disponibles: `409 Conflict`.
-- Éxito: `200 OK`, y el pedido devuelto tiene `couponId` igual al id del cupón, `couponDiscount` igual al importe descontado, `price` reducido en ese importe y el `usedCount` del cupón incrementado en 1.
+- `rating` ausente en el cuerpo de la petición: `422 Unprocessable Entity`.
+- `rating` no entero o fuera del rango 1-5: `422 Unprocessable Entity`.
+- `comment` supera los 500 caracteres: `422 Unprocessable Entity`.
+- Pedido que todavía no ha sido entregado (`deliveredAt` es `null`): `409 Conflict`.
+- Pedido que ya tiene una reseña: `409 Conflict`.
+- Éxito: `201 Created`, con la reseña devuelta incluyendo `rating` y `comment`, `orderId` igual al del pedido, `restaurantId` deducido del pedido y `userId` igual al del customer autenticado.
 
-**Pruebas de aceptación — Frontend** (pantalla `EditOrderScreen`, **Ejercicio 5**):
+**Pruebas de aceptación — Frontend** (pantallas "My Orders" y formulario de reseña, **Ejercicios 4 y 5**):
 
-- La pantalla dispone de un formulario con el código del cupón.
-- Al aplicarlo con éxito: se muestra un mensaje de éxito y se refresca el pedido mostrado, de forma que el nuevo precio y el descuento quedan visibles.
-- Si la aplicación falla (código inválido, cupón no aplicable, etc.): se muestra un mensaje de error y se permanece en la pantalla.
+- Un pedido entregado y sin reseña muestra el botón "Write review" (color `brandGreen`).
+- Al pulsarlo se navega a la pantalla del formulario de reseña.
+- Al guardar con éxito: se muestra un mensaje de éxito y se vuelve al listado "My Orders", donde el pedido ya muestra su reseña.
+- Si la creación falla (p. ej. el pedido ya no está entregado o ya tenía reseña): se muestra un mensaje de error y se permanece en el formulario.
 
 ### **RF3. Consultar mis pedidos**
 
@@ -111,7 +102,7 @@ Es necesaria la implementación de los siguientes requisitos funcionales:
 
 **quiero** ver el listado de los pedidos que he realizado
 
-**para** hacer seguimiento de los que aún no se han entregado y de los ya entregados, y acceder fácilmente a los pedidos sobre los que puedo actuar.
+**para** localizar los que ya he recibido y saber si ya los he valorado.
 
 **Pruebas de aceptación — Backend** (`GET /orders/customer`):
 
@@ -119,66 +110,64 @@ Es necesaria la implementación de los siguientes requisitos funcionales:
 - Con sesión iniciada como `owner`: `403 Forbidden`.
 - Con sesión iniciada como `customer`: `200 OK` y un array de pedidos.
 - El listado solo debe incluir pedidos cuyo `userId` sea el del customer autenticado (nunca pedidos de otros clientes).
-- Los pedidos pendientes de entregar (`deliveredAt` es `null`) deben listarse antes que los ya entregados.
+- Los pedidos pendientes de entregar (`deliveredAt` es `null`) deben listarse antes que los ya entregados (`deliveredAt` establecido).
+- Cada pedido debe incluir los datos del restaurante (`id`, `name`, `logo`) y su reseña asociada en la propiedad `review` (o `null` si el pedido todavía no ha sido valorado).
 
 **Pruebas de aceptación — Frontend** (pantalla "My Orders", **Ejercicio 4**):
 
 - Cada pedido se muestra con el logo del restaurante, el id del pedido, el nombre del restaurante, la dirección de entrega y el precio.
-- Si el pedido tiene un cupón aplicado, se muestra su código y/o el descuento aplicado.
-- Al pulsar sobre el `ImageCard` de cada pedido se navega a la pantalla `EditOrderScreen`.
-- El listado se recarga al volver desde la pantalla `EditOrderScreen`, no solo la primera vez que se monta la pantalla.
+- Si el pedido tiene una reseña, se muestra su puntuación (estrellas) y su comentario.
+- Si el pedido está entregado y no tiene reseña, se muestra el botón "Write review".
 - Si el customer no tiene pedidos, se muestra un mensaje indicándolo en lugar de una lista vacía.
 - Si la petición falla, se muestra un mensaje de error.
 
-### **RF4. Quitar un cupón**
+### **RF4. Editar una reseña**
 
 **Como** customer,
 
-**quiero** quitar el cupón de un pedido pendiente
+**quiero** editar la puntuación o el comentario de una reseña que he escrito
 
-**para** dejar de aplicar un descuento que ya no quiero usar.
+**para** corregir mi valoración.
 
-**Pruebas de aceptación — Backend** (`PATCH /orders/:orderId/removeCoupon`):
+**Pruebas de aceptación — Backend** (`PATCH /reviews/:reviewId`):
 
 - Sin sesión iniciada: `401 Unauthorized`.
 - Con sesión iniciada como `owner`: `403 Forbidden`.
-- Pedido que no pertenece al customer autenticado: `403 Forbidden`.
-- Pedido inexistente: `404 Not Found`.
-- Pedido que no está pendiente (ya tiene `startedAt`): `409 Conflict`.
-- Pedido que no tiene ningún cupón aplicado: `409 Conflict`.
-- Éxito: `200 OK`, con `couponId` y `couponDiscount` a `null`, el `price` restaurado a su valor original y el `usedCount` del cupón decrementado en 1.
+- Reseña que no pertenece al customer autenticado: `403 Forbidden`.
+- Reseña inexistente: `404 Not Found`.
+- `rating` presente pero no entero o fuera del rango 1-5: `422 Unprocessable Entity`.
+- `comment` supera los 500 caracteres: `422 Unprocessable Entity`.
+- Éxito: `200 OK`, con la reseña devuelta reflejando los nuevos valores de `rating` y/o `comment`.
+
+**Pruebas de aceptación — Frontend** (pantalla del formulario de reseña, **Ejercicio 5**):
+
+- Se accede a esta pantalla desde el listado "My Orders" al pulsar "Edit review" sobre un pedido valorado.
+- El formulario se inicializa con la puntuación y el comentario ya guardados.
+- Si el usuario introduce una puntuación fuera de 1-5 o un comentario de más de 500 caracteres, la aplicación de frontend debe mostrar un error de validación **antes** de enviar la petición. En cualquier caso, la aplicación de backend también debe asegurar estas reglas y mostrar los errores enviados por el backend.
+- Al guardar con éxito: se muestra un mensaje de éxito y se navega de vuelta al listado "My Orders".
+- Si guardar falla (p. ej. error del servidor o de conexión): se muestra un mensaje de error y se permanece en el formulario, sin perder lo escrito.
+
+### **RF5. Eliminar una reseña**
+
+**Como** customer,
+
+**quiero** eliminar una reseña que he escrito
+
+**para** dejar de valorar un pedido.
+
+**Pruebas de aceptación — Backend** (`DELETE /reviews/:reviewId`):
+
+- Sin sesión iniciada: `401 Unauthorized`.
+- Con sesión iniciada como `owner`: `403 Forbidden`.
+- Reseña que no pertenece al customer autenticado: `403 Forbidden`.
+- Reseña inexistente: `404 Not Found`.
+- Éxito: `200 OK`, y la reseña deja de aparecer en `GET /reviews/customer` y el pedido vuelve a mostrarse sin reseña en `GET /orders/customer`.
 
 **Pruebas de aceptación — Frontend** (pantalla "My Orders", **Ejercicio 4**):
 
-- Un pedido pendiente con cupón muestra el botón "Remove coupon" (color `brandGreen`).
-- Al pulsarlo con éxito: se muestra un mensaje de éxito y se refresca el listado **en la misma pantalla**; el pedido actualizado deja de mostrar el descuento y el botón.
+- Un pedido valorado muestra el botón "Delete review" (color `brandGreen`).
+- Al pulsarlo con éxito: se muestra un mensaje de éxito y se refresca el listado **en la misma pantalla**; el pedido actualizado deja de mostrar la reseña y el botón pasa a ser "Write review".
 - Si la acción falla: se muestra un mensaje de error y el listado no se modifica.
-
-### **RF5. Añadir indicaciones de entrega**
-
-**Como** customer,
-
-**quiero** añadir o editar una nota sobre la entrega de uno de mis pedidos
-
-**para** indicar al repartidor cómo entregarlo (p. ej. dónde dejarlo).
-
-**Pruebas de aceptación — Backend** (`PATCH /orders/:orderId/customerComments`):
-
-- Sin sesión iniciada: `401 Unauthorized`.
-- Con sesión iniciada como `owner`: `403 Forbidden`.
-- Pedido que no pertenece al customer autenticado: `403 Forbidden`.
-- Pedido inexistente: `404 Not Found`.
-- `customerComments` supera los 500 caracteres: `422 Unprocessable Entity`.
-- `customerComments` vacío, `null` o ausente: válido, `200 OK` (el comentario es opcional).
-- Éxito: `200 OK`, con el pedido devuelto reflejando el nuevo `customerComments`.
-
-**Pruebas de aceptación — Frontend** (pantalla `EditOrderScreen`, **Ejercicio 5**):
-
-- Se accede a esta pantalla pulsando sobre la tarjeta de un pedido en el listado "My Orders".
-- El formulario de indicaciones se inicializa con el comentario ya guardado del pedido (o vacío si no tenía).
-- Si el usuario escribe más de 500 caracteres, la aplicación de frontend debe mostrar un error de validación **antes** de enviar la petición, y el botón de guardar no debe completar el envío. En cualquier caso, la aplicación de backend también debe asegurar que el comentario no supera los 500 caracteres y mostrar los errores enviados por el backend.
-- Al guardar con éxito: se muestra un mensaje de éxito y se navega de vuelta al listado "My Orders" (`MyOrdersScreen`).
-- Si guardar falla (p. ej. error del servidor o de conexión): se muestra un mensaje de error y se permanece en el formulario, sin perder lo escrito.
 
 ---
 
@@ -186,49 +175,52 @@ Es necesaria la implementación de los siguientes requisitos funcionales:
 
 ### Ejercicios (Backend)
 
-#### 1. Migraciones y Modelos (1 puntos)
+#### 1. Migraciones y Modelos (1 punto)
 
-Realice las modificaciones necesarias en migraciones y modelos para implementar la asociación entre pedidos y cupones, y las indicaciones de entrega:
+Se le entrega el modelo `Review` (`src/models/Review.js`), su migración `create-review` y su seeder. El modelo ya define las asociaciones `Review.belongsTo(Order)` (alias `order`), `Review.belongsTo(Restaurant)` (alias `restaurant`) y `Review.belongsTo(User)` (alias `user`). Complete el modelado añadiendo las asociaciones inversas:
 
-- Añada a `Order` las columnas `couponId` (clave foránea a `Coupons`), `couponDiscount` y `customerComments`.
-- Añada la asociación `Order.belongsTo(Coupon)` (con alias `coupon`).
+- `Order.hasOne(Review)` con alias `review`.
+- `Restaurant.hasMany(Review)` con alias `reviews`.
+- `User.hasMany(Review)` con alias `reviews`.
 
-Recuerde modificar tanto la migración `create-order` como el modelo `Order.js`.
+Recuerde registrar estas asociaciones en los métodos `associate` de `Order.js`, `Restaurant.js` y `User.js`, usando las claves foráneas ya presentes en la migración (`orderId`, `restaurantId` y `userId`).
 
 #### 2. Enrutamiento, Middlewares y Validación (2 puntos)
 
-En `src/routes/OrderRoutes.js` añada las rutas nuevas para implementar los siguientes requisitos funcionales:
+Añada las rutas necesarias para implementar los siguientes requisitos funcionales:
 
-- **RF2. Aplicar un cupón**
-- **RF3. Consultar mis pedidos**
-- **RF4. Quitar un cupón**
-- **RF5. Añadir indicaciones de entrega**
+- En `src/routes/OrderRoutes.js`, la ruta **RF2. Crear una reseña** (`POST /orders/:orderId/reviews`).
+- En `src/routes/ReviewRoutes.js` (ya contiene `GET /reviews/customer` como parte del **RF1**), las rutas:
+  - **RF4. Editar una reseña** (`PATCH /reviews/:reviewId`)
+  - **RF5. Eliminar una reseña** (`DELETE /reviews/:reviewId`)
 
-En `src/middlewares/OrderMiddleware.js`, implemente los siguientes middlewares nuevos:
+En `src/middlewares/ReviewMiddleware.js` (fichero nuevo), implemente los siguientes middlewares:
 
-- `checkOrderBelongsToCustomer` para comprobar que el pedido pertenece al customer autenticado (usado en el **RF2**, **RF4** y **RF5**).
-- `checkOrderCanBeCouponApplied` para cumplir el **RF2. Aplicar un cupón** (pedido pendiente, sin cupón previo, cupón existente, no caducado, con usos disponibles e importe mínimo alcanzado).
-- `checkOrderCanRemoveCoupon` para cumplir el **RF4. Quitar un cupón** (pedido pendiente y con cupón aplicado).
+- `checkOrderCanBeReviewed` para cumplir el **RF2** (el pedido está entregado y todavía no tiene reseña).
+- `checkReviewOwnership` para comprobar que la reseña pertenece al customer autenticado (usado en **RF4** y **RF5**).
 
-En `src/controllers/validation/OrderValidation.js`, añada las reglas de validación:
+En `src/controllers/validation/ReviewValidation.js` (fichero nuevo), añada las reglas de validación:
 
-- `applyCoupon` necesarias para cumplir **RF2** (el `code` es obligatorio).
-- `updateCustomerComments` necesarias para cumplir **RF5**.
+- `create` necesarias para cumplir **RF2** (`rating` obligatorio, entero entre 1 y 5; `comment` opcional, máximo 500 caracteres).
+- `update` necesarias para cumplir **RF4** (`rating` opcional, entero entre 1 y 5; `comment` opcional, máximo 500 caracteres).
 
-> Los middlewares `checkOrderVisible`, `checkOrderIsPending`, `checkOrderCanBeSent`, `checkOrderCanBeDelivered` y `checkOrderOwnership`, así como `handleValidation`, ya están implementados y puede tomarlos como referencia en caso necesario.
+> El middleware `checkOrderBelongsToCustomer`, `checkOrderVisible`, `checkEntityExists` y `handleValidation` ya están implementados y puede tomarlos como referencia en caso necesario.
 
-> Como referencia de orden de rutas, `PATCH /orders/:orderId/applyCoupon` pasa por: `isLoggedIn`, `hasRole('customer')`, `checkEntityExists(Order, 'orderId')`, `checkOrderBelongsToCustomer`, las reglas de validación `applyCoupon`, `handleValidation`, `checkOrderCanBeCouponApplied` y, por último, el controlador.
-
-> Tenga en cuenta que `GET /orders/customer` debe registrarse **antes** que `GET /orders/:orderId`, para que Express no interprete `customer` como un `orderId`.
+> Como referencia de orden de rutas, `POST /orders/:orderId/reviews` pasa por: `isLoggedIn`, `hasRole('customer')`, `checkEntityExists(Order, 'orderId')`, `checkOrderBelongsToCustomer`, las reglas de validación `create`, `handleValidation`, `checkOrderCanBeReviewed` y, por último, el controlador.
 
 #### 3. Controladores (2 puntos)
 
+En `src/controllers/ReviewController.js`:
+
+- Implemente `create` para cumplir con **RF2. Crear una reseña** (deduzca `restaurantId` y `userId` a partir del pedido y del customer autenticado, no del cuerpo de la petición).
+- Implemente `update` para cumplir con **RF4. Editar una reseña**.
+- Implemente `destroy` para cumplir con **RF5. Eliminar una reseña**.
+
 En `src/controllers/OrderController.js`:
 
-- Implemente `applyCoupon` para cumplir con **RF2. Aplicar un cupón**.
-- Implemente `indexCustomer` para cumplir con **RF3. Consultar mis pedidos** (actualmente devuelve `500`).
-- Implemente `removeCoupon` para cumplir con **RF4. Quitar un cupón**.
-- Implemente `updateCustomerComments` para cumplir con **RF5. Añadir indicaciones de entrega**.
+- Implemente `indexCustomer` para cumplir con **RF3. Consultar mis pedidos** (actualmente devuelve `500`), incluyendo el restaurante y la reseña asociada a cada pedido.
+
+> El controlador `ReviewController.indexCustomer` ya está implementado como parte del **RF1. Consultar mis reseñas** y puede tomarlo como referencia.
 
 ---
 
@@ -237,11 +229,11 @@ En `src/controllers/OrderController.js`:
 Para este examen, se le entrega ya implementado:
 
 1. Registro y login de clientes (`registerCustomer`/`loginCustomer`, en `UserController.js` y `UserRoutes.js`).
-2. El modelo `Coupon` (`src/models/Coupon.js`), su migración (`create-coupon`) y su seeder, incluyendo cupones de ejemplo (`WELCOME10`, `SUMMER20`, `LASTONE`).
-3. El controlador `findAvailableCoupons` y la ruta `GET /coupons/available` (**RF1. Consultar cupones disponibles**).
-4. La comprobación de que un customer puede ver el detalle de sus propios pedidos (`checkOrderCustomer`, en `OrderMiddleware.js`).
+2. El modelo `Review` (`src/models/Review.js`), su migración (`create-review`) y su seeder, incluyendo reseñas de ejemplo para el customer de pruebas.
+3. El controlador `ReviewController.indexCustomer` y la ruta `GET /reviews/customer` (**RF1. Consultar mis reseñas**).
+4. La comprobación de que un pedido pertenece al customer autenticado (`checkOrderBelongsToCustomer`, en `OrderMiddleware.js`).
 5. Los controladores `confirm`, `send`, `deliver` y `show`, que podría reutilizar en caso necesario.
-6. El seeder de usuarios ya incluye un customer de pruebas: `customer1@customer.com` / `secret`.
+6. El seeder de usuarios ya incluye un customer de pruebas: `customer1@customer.com` / `secret`, con pedidos entregados (uno ya valorado y otro pendiente de valorar).
 
 ---
 
@@ -256,28 +248,34 @@ Implemente las pantallas necesarias en `DeliverUS-Frontend-Customer` para que un
 
 **Pantalla**: `src/screens/customerOrders/MyOrdersScreen.js`
 
-Implemente esta pantalla para cumplir con **RF3. Consultar mis pedidos** y **RF4. Quitar un cupón**. Use el componente `ImageCard` para cada pedido. Puede utilizar `AvailableCouponsScreen.js` como inspiración.
+Actualmente esta pantalla es un esqueleto que no muestra ningún pedido. Impleméntela para cumplir con **RF3. Consultar mis pedidos**, **RF2. Crear una reseña**, **RF4. Editar una reseña** y **RF5. Eliminar una reseña**. Use el componente `ImageCard` para cada pedido y puede utilizar `MyReviewsScreen.js` como inspiración.
 
-**API Backend necesaria** (añada las funciones que falten en `src/api/OrderEndpoints.js`):
+- Cada pedido se muestra con el logo del restaurante, el id del pedido, el nombre del restaurante, la dirección de entrega y el precio.
+- Si el pedido está entregado y **no** tiene reseña, muestra el botón "Write review" (color `brandGreen`), que navega al formulario de reseña (`EditReviewScreen`).
+- Si el pedido tiene reseña, muestra su puntuación (estrellas) y su comentario, junto con los botones "Edit review" (navega a `EditReviewScreen`) y "Delete review" (color `brandGreen`).
+- Al pulsar "Delete review" con éxito se refresca el listado **en la misma pantalla**; si falla, se muestra un error y el listado no cambia.
+- El listado se recarga al volver desde la pantalla `EditReviewScreen`, no solo la primera vez que se monta la pantalla.
+- Si el customer no tiene pedidos, se muestra un mensaje indicándolo en lugar de una lista vacía.
+- Si la petición falla, se muestra un mensaje de error.
+
+**API Backend necesaria** (añada las funciones que falten en `src/api/OrderEndpoints.js` y `src/api/ReviewEndpoints.js`):
 
 - `GET /orders/customer`
-- `PATCH /orders/:orderId/removeCoupon`
+- `DELETE /reviews/:reviewId`
 
-#### 5. Pantalla de detalle y cupón del pedido (2 puntos)
+#### 5. Formulario de reseña (2 puntos)
 
-**Pantalla**: `src/screens/customerOrders/EditOrderScreen.js`
+**Pantalla**: `src/screens/customerOrders/EditReviewScreen.js`
 
-Ya dispone de una versión de esta pantalla donde se muestra una cabecera con datos del restaurante y del pedido, y el listado de productos. Añada dos formularios con `Formik` y un esquema de validación de `yup`:
+Ya dispone de una versión de esta pantalla con una cabecera con datos del restaurante y del pedido, y el listado de productos. Añada un formulario con `Formik` y un esquema de validación de `yup` para cumplir con **RF2. Crear una reseña** y **RF4. Editar una reseña**, mostrando eventuales errores de validación enviados desde backend. La pantalla ya está registrada en `CustomerOrdersStack.js` y es alcanzable desde `MyOrdersScreen`.
 
-- un formulario para **aplicar un cupón** (**RF2**) con el código del cupón, y
-- un formulario para **añadir las indicaciones de entrega** (**RF5**),
+- La pantalla se comporta como **creación** si el pedido no tiene reseña, y como **edición** si ya la tiene (inicializando el formulario con la puntuación y el comentario existentes).
+- El formulario incluye la puntuación (1-5) y el comentario (máximo 500 caracteres).
 
-mostrando eventuales errores de validación enviados desde backend. Registre también esta pantalla en `CustomerOrdersStack.js` para que sea alcanzable desde `MyOrdersScreen` al pulsar sobre un pedido.
+**API Backend necesaria** (añada las funciones que falten en `src/api/ReviewEndpoints.js`):
 
-**API Backend necesaria** (añada las funciones que falten en `src/api/OrderEndpoints.js`):
-
-- `PATCH /orders/:orderId/applyCoupon`
-- `PATCH /orders/:orderId/customerComments`
+- `POST /orders/:orderId/reviews`
+- `PATCH /reviews/:reviewId`
 
 #### Fidelidad estética (1 punto)
 
@@ -285,25 +283,29 @@ Se valorará el grado de similitud visual de las interfaces entregadas con respe
 
 Para ello, tenga también en cuenta lo siguiente:
 
-- Use los colores corporativos definidos en `src/styles/GlobalStyles.js` (`brandBlue`/`brandBlueTap`, `brandGreen`/`brandGreenTap`, `brandPrimary`) y los iconos de `MaterialCommunityIcons` (paquete `@expo/vector-icons`) ya usados en el resto de la aplicación, manteniendo un estilo consistente con las pantallas ya existentes (`AvailableCouponsScreen.js`, `EditOrderScreen.js`).
+- Use los colores corporativos definidos en `src/styles/GlobalStyles.js` (`brandBlue`/`brandBlueTap`, `brandGreen`/`brandGreenTap`, `brandPrimary`) y los iconos de `MaterialCommunityIcons` (paquete `@expo/vector-icons`) ya usados en el resto de la aplicación, manteniendo un estilo consistente con las pantallas ya existentes (`MyReviewsScreen.js`, `EditReviewScreen.js`).
 - Los iconos concretos de `MaterialCommunityIcons` a utilizar son:
 
 | Icono | Dónde |
 | --- | --- |
-| `ticket-percent` | Botón "Apply coupon" (Ejercicio 5). |
-| `map-marker` | Dirección de entrega del pedido, en cada tarjeta de pedido (Ejercicio 4) y en la cabecera del pedido (Ejercicio 5). |
-| `cash` | Precio del pedido, en cada tarjeta de pedido (Ejercicio 4) y en la cabecera del pedido (Ejercicio 5). |
-| `comment-text` | Botón "Save comments" (Ejercicio 5). |
+| `star` | Puntuación de la reseña, en cada tarjeta de pedido (Ejercicio 4) y en el formulario (Ejercicio 5). |
+| `star-outline` | Reseña ausente / puntuación vacía (Ejercicio 4). |
+| `comment-text` | Botón "Save review" (Ejercicio 5). |
+| `map-marker` | Dirección de entrega del pedido, en cada tarjeta de pedido (Ejercicio 4). |
+| `cash` | Precio del pedido, en cada tarjeta de pedido (Ejercicio 4). |
+| `pencil` | Botón "Edit review" (Ejercicio 4). |
+| `delete` | Botón "Delete review" (Ejercicio 4). |
 
 ### Código Proporcionado (Frontend Customer)
 
 Para este examen, se le entrega ya implementado:
 
 1. Registro, login y perfil del customer (`LoginScreen.js`, `RegisterScreen.js`, `ProfileScreen.js` y su navegación).
-2. La pantalla de cupones disponibles (`AvailableCouponsScreen.js`).
-3. Las funciones ya existentes en `src/api/CouponEndpoints.js` (`getAvailableCoupons`) y en `src/api/OrderEndpoints.js` (`getOrderDetail`).
-4. La estructura base (cabecera con datos del restaurante y listado de productos) de `EditOrderScreen.js`, a la que solo debe añadir los formularios.
-5. El componente `InputItem`, ya preparado para integrarse con Formik.
+2. La pantalla de mis reseñas (`MyReviewsScreen.js` y su stack `MyReviewsStack.js`), correspondiente al **RF1. Consultar mis reseñas**.
+3. La estructura base (cabecera con datos del restaurante y del pedido, y listado de productos) de `EditReviewScreen.js`, a la que solo debe añadir el formulario.
+4. El esqueleto de `MyOrdersScreen.js` y la navegación en `CustomerOrdersStack.js`.
+5. Las funciones ya existentes en `src/api/OrderEndpoints.js` (`getOrderDetail`) y `src/api/ReviewEndpoints.js` (`getMyReviews`).
+6. El componente `InputItem`, ya preparado para integrarse con Formik, y `ImageCard`.
 
 ---
 
@@ -311,23 +313,40 @@ Para este examen, se le entrega ya implementado:
 
 Los códigos de estado y las reglas de negocio de cada endpoint están descritos en la RF correspondiente. Aquí solo se detalla la forma de los datos que no resulte obvia a partir de las RFs.
 
-### PATCH /orders/:orderId/applyCoupon (RF2)
+### POST /orders/:orderId/reviews (RF2)
 
 **Request**:
 
 ```json
 {
-  "code": "WELCOME10"
+  "rating": 5,
+  "comment": "Comida excelente y entrega muy rápida"
 }
 ```
 
-### PATCH /orders/:orderId/customerComments (RF5)
+**Respuesta de éxito** (`201 Created`):
+
+```json
+{
+  "id": 3,
+  "rating": 5,
+  "comment": "Comida excelente y entrega muy rápida",
+  "orderId": 12,
+  "restaurantId": 4,
+  "userId": 2,
+  "createdAt": "2026-09-30T12:00:00.000Z",
+  "updatedAt": "2026-09-30T12:00:00.000Z"
+}
+```
+
+### PATCH /reviews/:reviewId (RF4)
 
 **Request**:
 
 ```json
 {
-  "customerComments": "Dejado en la puerta, no contestan al timbre"
+  "rating": 4,
+  "comment": "Muy bien, aunque tardó un poco"
 }
 ```
 
@@ -349,6 +368,10 @@ Los códigos de estado y las reglas de negocio de cada endpoint están descritos
 ### b) Linux/MacOS
 
 - Abra un terminal y ejecute el comando `npm run install:all:bash`.
+
+### c) Arranque automático (Linux/MacOS)
+
+- Alternativamente, ejecute `./iniciar.sh` para preparar el entorno y arrancar el backend y la app Customer de una sola vez. El script crea los `.env` que falten, instala dependencias, levanta una base de datos MariaDB en Docker si no hay ninguna accesible, ejecuta migraciones y seeders y arranca los servicios. Use `./iniciar.sh --help` para ver todas las opciones (p. ej. `--all` para la app Owner, `--test` para lanzar los tests e2e, `--setup-only` o `--stop`).
 
 ## Ejecución
 
@@ -382,7 +405,7 @@ Los códigos de estado y las reglas de negocio de cada endpoint están descritos
 
 ## Test
 
-- Como ayuda puede ejecutar el conjunto de tests incluido `coupons.test.js`, que cubre el registro/login de customers, los cupones disponibles, la aplicación y retirada de cupones, el listado propio de pedidos y las indicaciones de entrega. Para ello ejecute el siguiente comando:
+- Como ayuda puede ejecutar el conjunto de tests incluido `reviews.test.js`, que cubre el registro/login de customers, el listado de reseñas propias, la creación, edición, consulta y eliminación de reseñas, y el listado de pedidos propios. Para ello ejecute el siguiente comando:
 
     ```Bash
     npm run test:backend

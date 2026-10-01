@@ -1,12 +1,12 @@
-import CouponController from '../controllers/CouponController.js'
+import ReviewController from '../controllers/ReviewController.js'
 import { hasRole, isLoggedIn } from '../middlewares/AuthMiddleware.js'
 
 const loadFileRoutes = function (app) {
-  app.route('/coupons/available')
+  app.route('/reviews/customer')
     .get(
       isLoggedIn,
       hasRole('customer'),
-      CouponController.findAvailableCoupons)
+      ReviewController.indexCustomer)
 }
 
 export default loadFileRoutes
