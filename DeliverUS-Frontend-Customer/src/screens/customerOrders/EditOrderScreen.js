@@ -13,7 +13,7 @@ import * as yup from 'yup'
 import InputItem from '../../components/InputItem'
 import { showMessage } from 'react-native-flash-message'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { getOrderDetail, applyCoupon, updateCustomerComments } from '../../api/OrderEndpoints'
+import { getOrderDetail, applyCoupon, updateCustomerComments, removeCoupon } from '../../api/OrderEndpoints'
 import ImageCard from '../../components/ImageCard'
 import TextRegular from '../../components/TextRegular'
 import TextSemiBold from '../../components/TextSemiBold'
@@ -113,6 +113,7 @@ export default function EditOrderScreen({ navigation, route }) {
             Ordered {getElapsedMinutes(order.createdAt)} min ago
           </TextRegular>
         </View>
+        {renderRemoveButton()}
         {renderCouponSection()}
         {renderCommentSection()}
       </View>
@@ -177,6 +178,23 @@ export default function EditOrderScreen({ navigation, route }) {
     }
   }
 
+  const handleRemoveCoupon = async values => {
+    try {
+      await removeCoupon(order.id)
+      showMessage({
+        message: `Coupon removed correctly`
+      })
+      await fetchOrderDetail()
+    } catch (error) {
+      showMessage({
+        message: `There was an error removing the coupon ${error}`,
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
+  }
+
   const handleSaveComment = async values => {
     try {
       await updateCustomerComments(order.id, values.comments)
@@ -191,6 +209,28 @@ export default function EditOrderScreen({ navigation, route }) {
         style: GlobalStyles.flashStyle,
         titleStyle: GlobalStyles.flashTextStyle
       })
+    }
+  }
+
+  const renderRemoveButton = () => {
+    if (order.couponId) {
+      return (
+        <View>
+            <Pressable
+              onPress={handleRemoveCoupon}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: pressed
+                    ? GlobalStyles.brandGreenTap
+                    : GlobalStyles.brandGreen
+                },
+                styles.button
+              ]}
+            >
+              <TextRegular textStyle={styles.text}>Remove coupon</TextRegular>
+            </Pressable>
+        </View>
+      )
     }
   }
 
