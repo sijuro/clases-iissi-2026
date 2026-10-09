@@ -1,4 +1,4 @@
-import { Order, Restaurant } from '../models/models.js'
+import { Order, Restaurant, Review } from '../models/models.js'
 
 const checkOrderCustomer = async (req, res, next) => {
   try {
@@ -92,6 +92,32 @@ const checkOrderBelongsToCustomer = async (req, res, next) => {
       return next()
     } else {
       return res.status(403).send('The order doesnt belong to you')
+    }
+  } catch (err) {
+    return res.status(500).send(err.message)
+  }
+}
+
+const checkOrderIsDelivered = async (req, res, next) => {
+  try {
+    const order = await Order.findByPk(req.params.orderId)
+    if (order.deliveredAt) {
+      return next()
+    } else {
+      return res.status(409).send('The order is not delivered yet')
+    }
+  } catch (err) {
+    return res.status(500).send(err.message)
+  }
+}
+
+const checkOrderNoReview = async (req, res, next) => {
+  try {
+    const review = await Review.findByFk(req.params.orderId)
+    if (review) {
+      return next()
+    } else {
+      return res.status(409).send('The order already has a review')
     }
   } catch (err) {
     return res.status(500).send(err.message)

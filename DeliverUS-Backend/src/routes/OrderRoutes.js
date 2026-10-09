@@ -37,6 +37,18 @@ const loadFileRoutes = function (app) {
       checkEntityExists(Order, 'orderId'),
       OrderMiddleware.checkOrderVisible,
       OrderController.show)
+
+  app.route('/orders/:orderId/reviews')
+    .get(
+      isLoggedIn,
+      hasRole('customer'),
+      OrderMiddleware.checkOrderOwnership,
+      checkEntityExists(Order, 'orderId'),
+      OrderValidation.create,
+      handleValidation,
+      OrderMiddleware.checkOrderIsDelivered,
+      OrderMiddleware.checkOrderNoReview,
+      OrderController.show)
 }
 
 export default loadFileRoutes
