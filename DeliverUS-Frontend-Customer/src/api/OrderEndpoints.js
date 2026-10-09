@@ -16,8 +16,8 @@ function applyCoupon (id, code) {
   return patch(`orders/${id}/applyCoupon`, { code })
 }
 
-function updateCustomerComments (id, comment) {
-  return patch(`orders/${id}/customerComments`, { comment })
+function updateCustomerComments (id, customerComments) {
+  return patch(`orders/${id}/customerComments`, { customerComments })
 }
 
 export { getOrderDetail, getOrders, removeCoupon, applyCoupon, updateCustomerComments }

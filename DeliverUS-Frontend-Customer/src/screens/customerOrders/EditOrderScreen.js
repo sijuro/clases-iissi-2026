@@ -201,7 +201,7 @@ export default function EditOrderScreen({ navigation, route }) {
       showMessage({
         message: `Comment updated correctly`
       })
-      navigation.navigate('MyOrdersScreen', { dirty: true })
+      await fetchOrderDetail()
     } catch (error) {
       showMessage({
         message: `There was an error saving the comment ${error}`,
@@ -292,8 +292,9 @@ export default function EditOrderScreen({ navigation, route }) {
   const renderCommentSection = () => {
     return (
       <Formik
+        enableReinitialize
         validationSchema={commentValidationSchema}
-        initialValues={{ comments: order.updateCustomerComments || '' }}
+        initialValues={{ comments: order.customerComments || '' }}
         onSubmit={handleSaveComment}>
         {({ handleSubmit }) => (
           <View style={styles.container}>
