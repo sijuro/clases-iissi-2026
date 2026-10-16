@@ -1,4 +1,4 @@
-import { Review, Restaurant } from '../models/models.js'
+import { Review, Restaurant, Order } from '../models/models.js'
 
 const indexCustomer = async function (req, res) {
   try {
@@ -22,15 +22,50 @@ const indexCustomer = async function (req, res) {
 }
 
 const create = async (req, res) => {
-  res.status(500).send('This function is to be implemented')
+  try {
+    const order = await Order.findByPk(req.params.orderId)
+    const review = await Review.create({
+      rating: req.body.rating,
+      comment: req.body.comment,
+      orderId: order.id,
+      restaurantId: order.restaurantId,
+      userId: req.user.id
+    })
+    return res.status(200).json(review)
+  } catch (err) {
+    res.status(500).send(err)
+  }
 }
 
 const update = async function (req, res) {
-  res.status(500).send('This function is to be implemented')
+  try {
+    const review = await Review.findByPk(req.params.reviewId)
+    if (req.body.rating !== undefined) {
+      review.rating = req.body.rating
+    }
+    if (req.body.comment !== undefined) {
+      review.comment = req.body.comment
+    }
+    const reviewUpdated = await review.save()
+    return res.json(reviewUpdated)
+  } catch (err) {
+    res.status(500).send(err)
+  }
 }
 
 const destroy = async function (req, res) {
-  res.status(500).send('This function is to be implemented')
+  try {
+    const result = await Review.destroy({ where: { id: req.params.reviewId } })
+    let message = ''
+    if (result === 1) {
+      message = 'Sucessfuly deleted review id.' + req.params.reviewId
+    } else {
+      message = 'Could not delete review.'
+    }
+    res.json(message)
+  } catch (err) {
+    res.status(500).send(err)
+  }
 }
 
 const ReviewController = {

@@ -1,6 +1,6 @@
-import { Order, Product, Restaurant, User, sequelizeSession } from '../models/models.js'
+import { Order, Product, Restaurant, Review, User, sequelizeSession } from '../models/models.js'
 import moment from 'moment'
-import { Op } from 'sequelize'
+import { Op, literal } from 'sequelize'
 const generateFilterWhereClauses = function (req) {
   const filterWhereClauses = []
   if (req.query.status) {
@@ -84,7 +84,32 @@ const indexRestaurant = async function (req, res) {
 }
 
 const indexCustomer = async function (req, res) {
-  res.status(500).send('This function is to be implemented')
+  try {
+    const orders = await Order.findAll({
+      where: {
+        userId: req.user.id
+      },
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'logo']
+        },
+        {
+          model: Review,
+          as: 'review',
+          attributes: ['rating', 'comment']
+        }
+      ],
+      order: [
+        [literal('deliveredAt IS NULL'), 'DESC'],
+        [literal('deliveredAt IS NOT NULL'), 'DESC']
+      ]
+    })
+    res.json(orders)
+  } catch (err) {
+    res.status(500).send(err)
+  }
 }
 
 const create = async (req, res) => {

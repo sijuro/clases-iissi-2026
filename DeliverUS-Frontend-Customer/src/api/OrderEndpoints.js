@@ -4,4 +4,8 @@ function getOrderDetail(id) {
   return get(`orders/${id}`)
 }
 
-export { getOrderDetail }
+function getMyOrders() {
+  return get('/orders/customer')
+}
+
+export { getOrderDetail, getMyOrders }

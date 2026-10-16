@@ -12,7 +12,7 @@ const loadModel = (sequelize, DataTypes) => {
       // define association here
       User.hasMany(models.Restaurant, { foreignKey: 'userId' })
       User.hasMany(models.Order, { foreignKey: 'userId' })
-      User.hasMany(models.Review, { foreignKey: 'reviewId', as: 'reviews'})
+      User.hasMany(models.Review, { foreignKey: 'userId', as: 'reviews' })
     }
   }
   User.init({

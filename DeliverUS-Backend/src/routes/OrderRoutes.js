@@ -31,6 +31,12 @@ const loadFileRoutes = function (app) {
       OrderMiddleware.checkOrderCanBeDelivered,
       OrderController.deliver)
 
+  app.route('/orders/customer')
+    .get(
+      isLoggedIn,
+      hasRole('customer'),
+      OrderController.indexCustomer)
+
   app.route('/orders/:orderId')
     .get(
       isLoggedIn,
@@ -39,16 +45,16 @@ const loadFileRoutes = function (app) {
       OrderController.show)
 
   app.route('/orders/:orderId/reviews')
-    .get(
+    .post(
       isLoggedIn,
       hasRole('customer'),
-      OrderMiddleware.checkOrderOwnership,
+      OrderMiddleware.checkReviewOwnership,
       checkEntityExists(Order, 'orderId'),
       OrderValidation.create,
       handleValidation,
       OrderMiddleware.checkOrderIsDelivered,
-      OrderMiddleware.checkOrderNoReview,
-      OrderController.show)
+      OrderMiddleware.checkOrderCanBeReviewed,
+      OrderController.create)
 }
 
 export default loadFileRoutes
