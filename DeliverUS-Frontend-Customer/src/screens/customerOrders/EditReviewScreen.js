@@ -4,7 +4,8 @@ import {
   View,
   FlatList,
   ImageBackground,
-  Image
+  Image,
+  Pressable
 } from 'react-native'
 import { showMessage } from 'react-native-flash-message'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
@@ -17,6 +18,11 @@ import defaultProductImage from '../../../assets/product.jpeg'
 import restaurantLogo from '../../../assets/restaurantLogo.jpeg'
 import { API_BASE_URL } from '@env'
 
+import { Formik } from 'formik'
+import * as yup from 'yup'
+import InputItem from '../../components/InputItem'
+import { addReview, editReview } from '../../api/ReviewEndpoints'
+
 const getElapsedMinutes = dateString => {
   const date = new Date(dateString)
   const now = new Date()
@@ -26,10 +32,110 @@ const getElapsedMinutes = dateString => {
 
 export default function EditReviewScreen({ navigation, route }) {
   const [order, setOrder] = useState({})
+  const [backendErrors, setBackendErrors] = useState([])
+  const review = route.params?.review
 
   useEffect(() => {
     fetchOrderDetail()
   }, [route])
+
+  const validationSchema = yup.object().shape({
+    ratings: yup.number()
+      .typeError('Rating must be a number')
+      .integer('Ratings must be an integer')
+      .min(1, 'Rating must be higher than 1')
+      .max(5, 'Ratings must be lower than 5')
+      .required(),
+
+    comments: yup.string()
+      .max(500, "Comment length must be lower than 500")
+  })
+
+  const submitReview = async values => {
+    setBackendErrors([])
+
+    try {
+
+      const payload = {
+        rating: Integer(values.rating),
+        comment: values.comment
+      }
+
+      if (review) {
+        await editReview(review.id, payload)
+      } else {
+        await addReview(review.id, payload)
+      }
+    } catch (error) {
+      setBackendErrors(error.errors)
+    }
+  }
+
+  const renderStars = rating => {
+    const stars = []
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <MaterialCommunityIcons
+          key={i}
+          name={i <= rating ? 'star' : 'star-outline'}
+          size={18}
+          color={GlobalStyles.brandPrimary}
+        />
+      )
+    }
+    return stars
+  }
+
+  const renderReviewForm = () => {
+    return (
+      <Formik
+        validationSchema={validationSchema}
+        initialValues={{ ratings: '0', comments: '' }}
+        onSubmit={submitReview}
+      >
+        {({ handleSubmit }) => (
+          <View style={{ alignItems: 'center' }}>
+            {/* <View style={styles.container}>
+              <View style={styles.starsRow}>
+                {renderStars(route.review.ratings)}
+              </View> */}
+              <InputItem
+                name="ratings"
+                label="Ratings:"
+                placeholder="0"
+              />
+              <InputItem
+                name="comments"
+                label="Comments"
+                placeholder="" //{route.review.comment}
+              />
+  
+              {backendErrors &&
+                backendErrors.map((error, index) => (
+                  <TextError key={index}>
+                    {error.param}-{error.msg}
+                  </TextError>
+                ))}
+  
+              <Pressable
+                onPress={handleSubmit}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: pressed
+                      ? GlobalStyles.brandSuccessTap
+                      : GlobalStyles.brandSuccess
+                  },
+                  styles.button
+                ]}
+              >
+                <TextRegular textStyle={styles.text}>Submit review</TextRegular>
+              </Pressable>
+            </View>
+          </View>
+        )}
+      </Formik>
+    )
+  }
 
   const renderHeader = () => {
     if (!order.restaurant) return null
@@ -147,6 +253,7 @@ export default function EditReviewScreen({ navigation, route }) {
       <FlatList
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmptyProductsList}
+        ListFooterComponent={renderReviewForm}
         style={styles.container}
         data={order.products}
         renderItem={renderProduct}
@@ -206,5 +313,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     marginVertical: 2
-  }
+  },
+  starsRow: {
+    flexDirection: 'row',
+    marginBottom: 6
+  },
 })

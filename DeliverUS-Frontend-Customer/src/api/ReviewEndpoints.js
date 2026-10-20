@@ -1,7 +1,19 @@
-import { get } from './helpers/ApiRequestsHelper'
+import { get, destroy, post, patch } from './helpers/ApiRequestsHelper'
 
 function getMyReviews() {
   return get('reviews/customer')
 }
 
-export { getMyReviews }
+function deleteReview(id) {
+  return destroy(`reviews/${id}`)
+}
+
+function addReview(id) {
+  return post(`orders/${id}/reviews`)
+}
+
+function editReview(id) {
+  return patch(`reviews/${id}`)
+}
+
+export { getMyReviews, deleteReview, addReview, editReview }
