@@ -1,5 +1,6 @@
 import * as RestaurantValidation from '../controllers/validation/RestaurantValidation.js'
 import RestaurantController from '../controllers/RestaurantController.js'
+import ReviewController from '../controllers/ReviewController.js'
 import ProductController from '../controllers/ProductController.js'
 import OrderController from '../controllers/OrderController.js'
 import { isLoggedIn, hasRole } from '../middlewares/AuthMiddleware.js'
@@ -49,6 +50,11 @@ const loadFileRoutes = function (app) {
       checkEntityExists(Restaurant, 'restaurantId'),
       RestaurantMiddleware.checkRestaurantOwnership,
       OrderController.indexRestaurant)
+
+  app.route('/restaurants/:restaurantId/reviews')
+    .get(
+      checkEntityExists(Restaurant, 'restaurantId'),
+      ReviewController.indexRestaurant)
 
   app.route('/restaurants/:restaurantId/products')
     .get(

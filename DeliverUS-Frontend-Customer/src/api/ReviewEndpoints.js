@@ -16,4 +16,8 @@ function editReview(reviewId, data) {
   return patch(`reviews/${reviewId}`, data)
 }
 
-export { getMyReviews, deleteReview, addReview, editReview }
+function getReviewsRestaurant(restaurantId) {
+  return get(`restaurants/${restaurantId}/reviews`)
+}
+
+export { getMyReviews, deleteReview, addReview, editReview, getReviewsRestaurant }

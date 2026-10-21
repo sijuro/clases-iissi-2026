@@ -67,9 +67,25 @@ export default function EditReviewScreen({ navigation, route }) {
       } else {
         await addReview(route.params.id, payload)
       }
+      showMessage({
+        message: review
+          ? 'Review successfully updated'
+          : 'Review successfully created',
+        type: 'success',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
       navigation.goBack()
     } catch (error) {
-      setBackendErrors(error.errors)
+      setBackendErrors(error.errors ?? [])
+      if (!error.errors) {
+        showMessage({
+          message: `There was an error while saving the review. ${error} `,
+          type: 'error',
+          style: GlobalStyles.flashStyle,
+          titleStyle: GlobalStyles.flashTextStyle
+        })
+      }
     }
   }
 

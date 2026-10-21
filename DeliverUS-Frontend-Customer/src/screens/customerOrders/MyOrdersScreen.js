@@ -89,6 +89,25 @@ export default function MyOrdersScreen({ navigation }) {
         />{' '}
         <TextRegular>{item.address}</TextRegular>
         <TextRegular>{item.price?.toFixed(2)}€</TextRegular>
+
+        <Pressable
+          onPress={() => 
+            navigation.navigate('RestaurantReviewScreen', {
+              restaurant: item.restaurant
+            })
+          }
+          style={({ pressed }) => [
+            {
+              backgroundColor: pressed
+                ? GlobalStyles.brandBackground
+                : GlobalStyles.brandGreen
+            }
+          ]}
+        >
+          Restaurant reviews
+        </Pressable>
+
+
         {item.review ? (
           <View style={styles.reviewContainer}>
             <View style={styles.starsRow}>

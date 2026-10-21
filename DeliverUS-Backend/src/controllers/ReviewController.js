@@ -1,4 +1,4 @@
-import { Review, Restaurant, Order } from '../models/models.js'
+import { Review, Restaurant, Order, User } from '../models/models.js'
 
 const indexCustomer = async function (req, res) {
   try {
@@ -21,6 +21,27 @@ const indexCustomer = async function (req, res) {
   }
 }
 
+const indexRestaurant = async function (req, res) {
+  try {
+    const reviews = await Review.findAll({
+      where: {
+        restaurantId: req.params.restaurantId
+      },
+      include: [{
+        model: User,
+        as: 'user',
+        attributes: ['id', 'firstName', 'avatar']
+      }],
+      order: [
+        ['createdAt', 'DESC']
+      ]
+    })
+    return res.json(reviews)
+  } catch (err) {
+    return res.status(500).send(err)
+  }
+}
+
 const create = async (req, res) => {
   try {
     const order = await Order.findByPk(req.params.orderId)
@@ -31,7 +52,7 @@ const create = async (req, res) => {
       restaurantId: order.restaurantId,
       userId: req.user.id
     })
-    return res.status(200).json(review)
+    return res.status(201).json(review)
   } catch (err) {
     res.status(500).send(err)
   }
@@ -70,6 +91,7 @@ const destroy = async function (req, res) {
 
 const ReviewController = {
   indexCustomer,
+  indexRestaurant,
   create,
   update,
   destroy

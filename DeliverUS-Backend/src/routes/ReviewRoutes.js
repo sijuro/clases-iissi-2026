@@ -1,10 +1,10 @@
 import ReviewController from '../controllers/ReviewController.js'
-import * as ReviewValidation from '../controllers/validation/ReviewValidation.js'
 import { hasRole, isLoggedIn } from '../middlewares/AuthMiddleware.js'
 import { checkEntityExists } from '../middlewares/EntityMiddleware.js'
-import * as ReviewMiddleware from '../middlewares/ReviewMiddleware.js'
-import { handleValidation } from '../middlewares/ValidationHandlingMiddleware.js'
 import { Review } from '../models/models.js'
+import * as ReviewMiddleware from '../middlewares/ReviewMiddleware.js'
+import * as ReviewValidation from '../controllers/validation/ReviewValidation.js'
+import { handleValidation } from '../middlewares/ValidationHandlingMiddleware.js'
 
 const loadFileRoutes = function (app) {
   app.route('/reviews/customer')

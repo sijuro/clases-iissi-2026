@@ -1,7 +1,11 @@
 import OrderController from '../controllers/OrderController.js'
+import ReviewController from '../controllers/ReviewController.js'
+import * as ReviewValidation from '../controllers/validation/ReviewValidation.js'
 import { hasRole, isLoggedIn } from '../middlewares/AuthMiddleware.js'
 import { checkEntityExists } from '../middlewares/EntityMiddleware.js'
 import * as OrderMiddleware from '../middlewares/OrderMiddleware.js'
+import * as ReviewMiddleware from '../middlewares/ReviewMiddleware.js'
+import { handleValidation } from '../middlewares/ValidationHandlingMiddleware.js'
 import { Order } from '../models/models.js'
 
 const loadFileRoutes = function (app) {
@@ -48,13 +52,12 @@ const loadFileRoutes = function (app) {
     .post(
       isLoggedIn,
       hasRole('customer'),
-      OrderMiddleware.checkReviewOwnership,
       checkEntityExists(Order, 'orderId'),
-      OrderValidation.create,
+      OrderMiddleware.checkOrderBelongsToCustomer,
+      ReviewValidation.create,
       handleValidation,
-      OrderMiddleware.checkOrderIsDelivered,
-      OrderMiddleware.checkOrderCanBeReviewed,
-      OrderController.create)
+      ReviewMiddleware.checkOrderCanBeReviewed,
+      ReviewController.create)
 }
 
 export default loadFileRoutes
