@@ -1,5 +1,6 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useCallback, useContext, useState } from 'react'
 import { View, FlatList, StyleSheet, Pressable } from 'react-native'
+import { useFocusEffect } from '@react-navigation/native'
 import TextSemiBold from '../../components/TextSemiBold'
 import TextRegular from '../../components/TextRegular'
 import ImageCard from '../../components/ImageCard'
@@ -16,13 +17,15 @@ export default function MyOrdersScreen({ navigation }) {
   const [orders, setOrders] = useState([])
   const { loggedInUser } = useContext(AuthorizationContext)
 
-  useEffect(() => {
-    if (loggedInUser) {
-      fetchOrders()
-    } else {
-      setOrders([])
-    }
-  }, [loggedInUser])
+  useFocusEffect(
+    useCallback(() => {
+      if (loggedInUser) {
+        fetchOrders()
+      } else {
+        setOrders([])
+      }
+    }, [loggedInUser])
+  )
 
   const fetchOrders = async () => {
     try {
@@ -68,6 +71,7 @@ export default function MyOrdersScreen({ navigation }) {
   }
 
   const renderOrder = ({ item }) => {
+    // console.log(item);
     return (
       <ImageCard
         imageUri={
@@ -78,11 +82,15 @@ export default function MyOrdersScreen({ navigation }) {
         title={`Order #${item.id}`}
       >
         <TextSemiBold>{item.restaurant?.name}</TextSemiBold>
+        <MaterialCommunityIcons
+          name="map-marker"
+          size={14}
+          color="white"
+        />{' '}
         <TextRegular>{item.address}</TextRegular>
         <TextRegular>{item.price?.toFixed(2)}€</TextRegular>
-
         {item.review ? (
-          <View style={styles.reviewContainer}> // TODO
+          <View style={styles.reviewContainer}>
             <View style={styles.starsRow}>
               {renderStars(item.review.rating)}
             </View>
@@ -186,7 +194,5 @@ const styles = StyleSheet.create({
     color: '#888',
     fontStyle: 'italic'
   },
-  reviewContainer: {
-
-  }
+  reviewContainer: {}
 })

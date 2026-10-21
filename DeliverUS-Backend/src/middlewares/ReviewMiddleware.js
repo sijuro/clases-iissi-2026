@@ -1,4 +1,4 @@
-import { Order, Review } from "../models/models"
+import { Order, Review } from '../models/models.js'
 
 const checkOrderCanBeReviewed = async (req, res, next) => {
   try {
@@ -22,7 +22,7 @@ const checkReviewOwnership = async (req, res, next) => {
     if (review && review.userId == req.user.id) {
       return next()
     }
-    return res.status(409).send('This review does not belong to you')
+    return res.status(403).send('This review does not belong to you')
   } catch (err) {
     return res.status(500).send(err)
   }

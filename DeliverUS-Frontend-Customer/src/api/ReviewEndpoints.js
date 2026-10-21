@@ -4,16 +4,16 @@ function getMyReviews() {
   return get('reviews/customer')
 }
 
-function deleteReview(id) {
-  return destroy(`reviews/${id}`)
+function deleteReview(reviewId) {
+  return destroy(`reviews/${reviewId}`)
 }
 
-function addReview(id) {
-  return post(`orders/${id}/reviews`)
+function addReview(orderId, data) {
+  return post(`orders/${orderId}/reviews`, data)
 }
 
-function editReview(id) {
-  return patch(`reviews/${id}`)
+function editReview(reviewId, data) {
+  return patch(`reviews/${reviewId}`, data)
 }
 
 export { getMyReviews, deleteReview, addReview, editReview }

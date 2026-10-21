@@ -23,6 +23,8 @@ import * as yup from 'yup'
 import InputItem from '../../components/InputItem'
 import { addReview, editReview } from '../../api/ReviewEndpoints'
 
+import TextError from '../../components/TextError'
+
 const getElapsedMinutes = dateString => {
   const date = new Date(dateString)
   const now = new Date()
@@ -40,32 +42,32 @@ export default function EditReviewScreen({ navigation, route }) {
   }, [route])
 
   const validationSchema = yup.object().shape({
-    ratings: yup.number()
+    rating: yup
+      .number()
       .typeError('Rating must be a number')
       .integer('Ratings must be an integer')
       .min(1, 'Rating must be higher than 1')
       .max(5, 'Ratings must be lower than 5')
       .required(),
 
-    comments: yup.string()
-      .max(500, "Comment length must be lower than 500")
+    comment: yup.string().max(500, 'Comment length must be lower than 500')
   })
 
   const submitReview = async values => {
     setBackendErrors([])
 
     try {
-
       const payload = {
-        rating: Integer(values.rating),
+        rating: Number(values.rating),
         comment: values.comment
       }
 
       if (review) {
         await editReview(review.id, payload)
       } else {
-        await addReview(review.id, payload)
+        await addReview(route.params.id, payload)
       }
+      navigation.goBack()
     } catch (error) {
       setBackendErrors(error.errors)
     }
@@ -87,50 +89,57 @@ export default function EditReviewScreen({ navigation, route }) {
   }
 
   const renderReviewForm = () => {
+    const initialValues = {
+      rating: review?.rating?.toString() ?? '',
+      comment: review?.comment ?? ''
+    }
     return (
       <Formik
         validationSchema={validationSchema}
-        initialValues={{ ratings: '0', comments: '' }}
+        initialValues={initialValues}
         onSubmit={submitReview}
       >
         {({ handleSubmit }) => (
           <View style={{ alignItems: 'center' }}>
-            {/* <View style={styles.container}>
-              <View style={styles.starsRow}>
-                {renderStars(route.review.ratings)}
-              </View> */}
-              <InputItem
-                name="ratings"
-                label="Ratings:"
-                placeholder="0"
-              />
-              <InputItem
-                name="comments"
-                label="Comments"
-                placeholder="" //{route.review.comment}
-              />
-  
-              {backendErrors &&
-                backendErrors.map((error, index) => (
-                  <TextError key={index}>
-                    {error.param}-{error.msg}
-                  </TextError>
-                ))}
-  
-              <Pressable
-                onPress={handleSubmit}
-                style={({ pressed }) => [
-                  {
-                    backgroundColor: pressed
-                      ? GlobalStyles.brandSuccessTap
-                      : GlobalStyles.brandSuccess
-                  },
-                  styles.button
-                ]}
-              >
-                <TextRegular textStyle={styles.text}>Submit review</TextRegular>
-              </Pressable>
+            <View style={styles.starsRow}>
+              {renderStars(initialValues.rating)}
             </View>
+            <InputItem
+              name="rating"
+              label="Ratings:"
+              placeholder={initialValues.rating}
+            />
+            <InputItem
+              name="comment"
+              label="Comments"
+              placeholder={initialValues.comment}
+            />
+
+            {backendErrors &&
+              backendErrors.map((error, index) => (
+                <TextError key={index}>
+                  {error.param}-{error.msg}
+                </TextError>
+              ))}
+
+            <Pressable
+              onPress={handleSubmit}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: pressed
+                    ? GlobalStyles.brandSuccessTap
+                    : GlobalStyles.brandSuccess
+                },
+                styles.button
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="comment-text"
+                size={14}
+                color="white"
+              />{' '}
+              <TextRegular textStyle={styles.text}>Save review</TextRegular>
+            </Pressable>
           </View>
         )}
       </Formik>
@@ -317,5 +326,5 @@ const styles = StyleSheet.create({
   starsRow: {
     flexDirection: 'row',
     marginBottom: 6
-  },
+  }
 })

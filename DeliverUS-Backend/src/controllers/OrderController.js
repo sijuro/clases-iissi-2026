@@ -98,7 +98,7 @@ const indexCustomer = async function (req, res) {
         {
           model: Review,
           as: 'review',
-          attributes: ['rating', 'comment']
+          attributes: ['id', 'rating', 'comment']
         }
       ],
       order: [
